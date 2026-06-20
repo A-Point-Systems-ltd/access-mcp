@@ -1,0 +1,37 @@
+# Access-MCP Cursor Rules
+
+## Project Context
+
+You are working with Access-MCP, an MCP server for Microsoft Access databases.
+When the Access-MCP server is connected, you have tools to interact with Access databases.
+
+## Access Database Conventions
+
+- Always open the database (`Session_OpenDatabase`) before using any other tools
+- Always close the database (`Session_CloseDatabase`) when done to release file locks
+- Read schema and VBA before making modifications
+- Use parameterized queries for user-supplied values
+
+## Access SQL Syntax
+
+- Wildcards: use `*` not `%` in LIKE patterns
+- Date literals: `#2024-01-15#`
+- Booleans: `True`/`False` or `-1`/`0`
+- Top N: `SELECT TOP 10 * FROM Table` (no LIMIT)
+- Conditional: `IIf(condition, true_val, false_val)` not `IF()`
+- Crosstab: `TRANSFORM ... SELECT ... PIVOT`
+
+## VBA Standards
+
+- `Option Explicit` at top of every module
+- Error handling: `On Error GoTo ErrHandler`
+- Form controls: `Me.ControlName`
+- Actions: `DoCmd.OpenForm`, `DoCmd.RunSQL`, etc.
+- Domain functions: `DLookup`, `DCount`, `DSum`
+
+## File Types
+
+- `.accdb` — Access 2007+ database (preferred)
+- `.mdb` — Access 97-2003 database (legacy)
+- `.adp` — Access Data Project (SQL Server frontend)
+- `.laccdb` / `.ldb` — Lock files (never commit these)

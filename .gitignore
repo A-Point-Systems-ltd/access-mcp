@@ -1,0 +1,32 @@
+# Build output
+bin/
+obj/
+*.exe
+*.dll
+*.pdb
+
+# IDE
+.vs/
+.vscode/
+*.suo
+*.user
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Secrets
+*.env
+appsettings.*.json
+!appsettings.json
+
+# Logs
+*.log
+logs/
+
+# Access databases (don't commit real data)
+*.accdb
+*.mdb
+*.laccdb
+*.ldb
