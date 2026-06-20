@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://access-mcp.ai/favicon.svg" alt="Access-MCP" width="600">
+  <img src="https://access-mcp.ai/favicon.svg" alt="Access-MCP" width="64">
 </p>
 
 <h1 align="center">Access-MCP</h1>
