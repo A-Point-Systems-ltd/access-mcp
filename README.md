@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://access-mcp.ai/og-image.png" alt="Access-MCP" width="600">
+  <img src="https://access-mcp.ai/favicon.svg" alt="Access-MCP" width="600">
 </p>
 
 <h1 align="center">Access-MCP</h1>
@@ -41,18 +41,6 @@ Grab the latest `MS.Access.MCP.exe` from the [Releases](https://github.com/A-Poi
 ### 2. Configure your MCP client
 
 Add this to your MCP configuration:
-
-**Claude Desktop** (`%APPDATA%\Claude\claude_desktop_config.json`):
-```json
-{
-  "mcpServers": {
-    "access-mcp": {
-      "command": "c:\\access-mcp\\MS.Access.MCP.exe",
-      "args": ["C:\\Path\\To\\YourDatabase.accdb"]
-    }
-  }
-}
-```
 
 **Cursor** (`.cursor/mcp.json`):
 ```json
@@ -104,7 +92,7 @@ Just ask your agent to work with the database:
 ## Requirements
 
 - **Windows 10/11** or Windows Server 2016+
-- **Microsoft Access** installed locally (any version: 2010, 2013, 2016, 2019, 2021, 365)
+- **Microsoft Access** installed locally (any version: 2003 or later)
 - **.NET 9 Runtime** (bundled in the release)
 
 ## Pricing
