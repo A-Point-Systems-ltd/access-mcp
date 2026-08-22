@@ -23,9 +23,12 @@
 #   * Binaries are downloaded ONLY from the version-pinned URL inside the
 #     manifest, whose embedded tag MUST equal the manifest version — never
 #     through a `latest` redirect (TOCTOU).
-#   * SHA256 is verified before a byte lands in versions\. When the manifest
-#     says the release is signed (signing.status == 'ev'), a Valid
-#     Authenticode signature is REQUIRED as well.
+#   * The pin is version + BYTES: SHA256 is verified before a byte lands in
+#     versions\ AND on every cache hit before launch — a directory named
+#     right but holding the wrong exe is quarantined and re-fetched, never
+#     run. When the manifest says the release is signed (signing.status ==
+#     'ev'), a Valid Authenticode signature from OUR pinned certificate
+#     (thumbprint, and subject when given) is REQUIRED as well.
 #   * No cache cleanup here: another plugin may pin any version. The
 #     installer owns cache maintenance.
 #   * This is public code: no secrets, no licensing logic, no internal
@@ -114,6 +117,58 @@ function Assert-ManifestShape($Manifest, [string] $Origin) {
     }
 }
 
+function Assert-ExeTrusted([string] $Path, $Manifest) {
+    # The pin is version + BYTES, not "a directory with the right name
+    # exists" (review round 4, §2). Applied to every candidate exe — a fresh
+    # download and a cache hit alike.
+    $actual = (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash
+    if ($actual -ne ([string] $Manifest.exe_sha256).ToUpperInvariant()) {
+        throw "SHA256 mismatch for ${Path}: expected $($Manifest.exe_sha256), got $actual"
+    }
+    # Once the manifest declares a signed release, an unsigned or tampered
+    # exe is a hard failure — and 'Valid' alone is not enough: the signature
+    # must be OUR certificate, pinned by thumbprint (and subject when given),
+    # so any other validly-signed binary is still rejected.
+    $signing = Get-Prop $Manifest 'signing'
+    if ($signing -and (Get-Prop $signing 'status') -eq 'ev') {
+        $sig = Get-AuthenticodeSignature -LiteralPath $Path
+        if ($sig.Status -ne 'Valid') {
+            throw "Authenticode verification failed ($($sig.Status)) for a release the manifest says is signed"
+        }
+        $wantThumb = [string] (Get-Prop $signing 'thumbprint')
+        if ($wantThumb -and ($sig.SignerCertificate.Thumbprint -ne $wantThumb.ToUpperInvariant())) {
+            throw "Authenticode signer thumbprint $($sig.SignerCertificate.Thumbprint) != pinned $wantThumb"
+        }
+        $wantSubject = [string] (Get-Prop $signing 'subject')
+        if ($wantSubject -and ($sig.SignerCertificate.Subject -notlike "*$wantSubject*")) {
+            throw "Authenticode signer subject '$($sig.SignerCertificate.Subject)' does not match pinned '$wantSubject'"
+        }
+    }
+}
+
+function Test-CachedVersion($Manifest) {
+    # $true only when the pinned version is cached AND its bytes verify
+    # against the manifest (hash + signature pinning).
+    $exe = Get-ExePathFor ([string] $Manifest.version)
+    if (-not (Test-Path -LiteralPath $exe)) { return $false }
+    try { Assert-ExeTrusted $exe $Manifest; $true }
+    catch {
+        Write-Err "cached $($Manifest.version) failed verification: $($_.Exception.Message)"
+        $false
+    }
+}
+
+function Invoke-QuarantineVersion([string] $Version) {
+    # Move a corrupt cache entry aside (never run it, never silently delete
+    # evidence). Fails if the exe is currently running — replacing bytes
+    # under a live process is exactly what we refuse to do.
+    $dir = Join-Path $VersionsDir $Version
+    if (-not (Test-Path -LiteralPath $dir)) { return }
+    $dest = Join-Path $Root ("quarantine-$Version-" + [guid]::NewGuid().ToString('N'))
+    Move-Item -LiteralPath $dir -Destination $dest
+    Write-Err "quarantined corrupt cache entry to $dest"
+}
+
 function Install-Version($Manifest) {
     # Stage into a temp file, verify, then move atomically into versions\<v>\.
     $version = [string] $Manifest.version
@@ -129,20 +184,7 @@ function Install-Version($Manifest) {
         [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
         Invoke-WebRequest -Uri $Manifest.exe_url -OutFile $tmpExe -UseBasicParsing -TimeoutSec $DownloadTimeoutSec
 
-        $actual = (Get-FileHash -LiteralPath $tmpExe -Algorithm SHA256).Hash
-        if ($actual -ne ([string] $Manifest.exe_sha256).ToUpperInvariant()) {
-            throw "SHA256 mismatch for $($Manifest.exe_url): expected $($Manifest.exe_sha256), got $actual"
-        }
-
-        # Once the manifest declares a signed release, an unsigned or
-        # tampered exe is a hard failure — not a warning.
-        $signing = Get-Prop $Manifest 'signing'
-        if ($signing -and (Get-Prop $signing 'status') -eq 'ev') {
-            $sig = Get-AuthenticodeSignature -LiteralPath $tmpExe
-            if ($sig.Status -ne 'Valid') {
-                throw "Authenticode verification failed ($($sig.Status)) for a release the manifest says is signed"
-            }
-        }
+        Assert-ExeTrusted $tmpExe $Manifest
 
         New-Item -ItemType Directory -Force -Path $destDir | Out-Null
         Move-Item -LiteralPath $tmpExe -Destination $destExe -Force
@@ -219,7 +261,18 @@ $mutex = New-Object System.Threading.Mutex($false, 'Local\AccessMCP.Bootstrap')
 try { $null = $mutex.WaitOne() }
 catch [System.Threading.AbandonedMutexException] { }
 try {
-    if (-not (Test-InstalledVersion $pinned)) {
+    # Cache hit counts only if the BYTES verify — a directory named 2.3.1
+    # holding the wrong exe (corruption, restore, replaced asset) is treated
+    # as not installed: quarantined and re-fetched, never run.
+    $cachedOk = Test-CachedVersion $localManifest
+    if (-not $cachedOk -and (Test-InstalledVersion $pinned)) {
+        try { Invoke-QuarantineVersion $pinned }
+        catch {
+            Fail ("cached accessmcp.exe $pinned failed verification but cannot be replaced " +
+                  "($($_.Exception.Message)) — close clients using it and retry, or reinstall the plugin")
+        }
+    }
+    if (-not $cachedOk) {
         try { Install-Version $localManifest }
         catch {
             $cached = @(Get-ChildItem -LiteralPath $VersionsDir -Directory -ErrorAction SilentlyContinue |

@@ -160,6 +160,13 @@ if (!agentMcp.includes('${PLUGIN_ROOT}')) {
 if (agentMcp.includes('__PLUGIN_ROOT__')) {
   err('agent-plugin/mcp.json: legacy __PLUGIN_ROOT__ token — the canonical package uses ${PLUGIN_ROOT}');
 }
+// Agent Plugins 1.0 requires the $schema declaration on the MCP config
+// itself, not only on plugin.json — a conformant client MUST reject the
+// component otherwise (review round 4, §1).
+const agentMcpJson = readJson(join(root, 'agent-plugin/mcp.json'));
+if (!agentMcpJson?.$schema || !/agent-plugins\.org\/schemas\/.*mcp\.schema\.json/.test(agentMcpJson.$schema)) {
+  err('agent-plugin/mcp.json: missing the Agent Plugins 1.0 mcp.schema.json $schema declaration');
+}
 const claudeMcpPath = join(root, 'claude-plugin/.mcp.json');
 const claudeMcp = read(claudeMcpPath);
 if (claudeMcp.includes('${PLUGIN_ROOT}') || claudeMcp.includes('__PLUGIN_ROOT__')) {
@@ -177,6 +184,12 @@ if (claudePlugin && agentPlugin) {
   }
 }
 const claudeMcpJson = readJson(claudeMcpPath);
+// The Claude adapter is NOT an Agent Plugins consumer — sync strips the
+// agent-plugins $schema during derivation; its presence means derivation
+// did not run.
+if (claudeMcpJson?.$schema && /agent-plugins\.org/.test(claudeMcpJson.$schema)) {
+  err('claude-plugin/.mcp.json: carries the agent-plugins $schema — adapter derivation should strip it');
+}
 const server = claudeMcpJson?.mcpServers?.accessmcp;
 if (server && !/bootstrap\.ps1$/.test(server.args?.at(-1) ?? '')) {
   err('claude-plugin/.mcp.json: server must launch bootstrap/bootstrap.ps1');

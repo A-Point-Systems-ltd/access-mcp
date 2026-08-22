@@ -102,6 +102,76 @@ Describe 'Read-Json / Write-JsonAtomic' {
     }
 }
 
+Describe 'Assert-ExeTrusted / Test-CachedVersion (version + BYTES pin)' {
+    BeforeEach {
+        $script:VersionsDir = Join-Path ([IO.Path]::GetTempPath()) ("accessmcp-httest-" + [guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Force -Path $script:VersionsDir | Out-Null
+    }
+    AfterEach {
+        Remove-Item $script:VersionsDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    It 'accepts an exe whose bytes match the pinned hash' {
+        $exe = Get-ExePathFor '2.3.1'
+        New-Item -ItemType Directory -Force -Path (Split-Path $exe) | Out-Null
+        [IO.File]::WriteAllText($exe, 'the right bytes')
+        $hash = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+        $m = New-Manifest @{ exe_sha256 = $hash }
+        { Assert-ExeTrusted $exe $m } | Should -Not -Throw
+        Test-CachedVersion $m | Should -BeTrue
+    }
+
+    It 'rejects a cached entry with the right version name but WRONG bytes' {
+        # The round-4 finding: versions\2.3.1\ exists but holds different
+        # bytes than the manifest pins — must NOT count as installed.
+        $exe = Get-ExePathFor '2.3.1'
+        New-Item -ItemType Directory -Force -Path (Split-Path $exe) | Out-Null
+        [IO.File]::WriteAllText($exe, 'tampered / stale bytes')
+        $m = New-Manifest   # pins the aaaa... hash, not these bytes
+        { Assert-ExeTrusted $exe $m } | Should -Throw '*SHA256 mismatch*'
+        Test-CachedVersion $m | Should -BeFalse
+        Test-InstalledVersion '2.3.1' | Should -BeTrue   # exists — but existence is no longer enough
+    }
+
+    It 'returns false when the pinned version is simply not cached' {
+        Test-CachedVersion (New-Manifest) | Should -BeFalse
+    }
+
+    It 'does not require Authenticode while the manifest says unsigned' {
+        $exe = Get-ExePathFor '2.3.1'
+        New-Item -ItemType Directory -Force -Path (Split-Path $exe) | Out-Null
+        [IO.File]::WriteAllText($exe, 'unsigned era bytes')
+        $hash = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash
+        $m = New-Manifest @{ exe_sha256 = $hash; signing = [pscustomobject]@{ status = 'unsigned'; subject = ''; thumbprint = '' } }
+        { Assert-ExeTrusted $exe $m } | Should -Not -Throw
+    }
+
+    It 'demands a signature the moment the manifest says ev (plain file must fail)' {
+        $exe = Get-ExePathFor '2.3.1'
+        New-Item -ItemType Directory -Force -Path (Split-Path $exe) | Out-Null
+        [IO.File]::WriteAllText($exe, 'bytes that are not signed')
+        $hash = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash
+        $m = New-Manifest @{ exe_sha256 = $hash; signing = [pscustomobject]@{ status = 'ev'; subject = 'A-Point Systems Ltd'; thumbprint = 'AB12' } }
+        { Assert-ExeTrusted $exe $m } | Should -Throw '*Authenticode*'
+    }
+}
+
+Describe 'Invoke-QuarantineVersion' {
+    It 'moves a corrupt cache entry aside instead of deleting it' {
+        $script:Root = Join-Path ([IO.Path]::GetTempPath()) ("accessmcp-qtest-" + [guid]::NewGuid().ToString('N'))
+        $script:VersionsDir = Join-Path $script:Root 'versions'
+        try {
+            $exe = Get-ExePathFor '2.3.1'
+            New-Item -ItemType Directory -Force -Path (Split-Path $exe) | Out-Null
+            [IO.File]::WriteAllText($exe, 'bad bytes')
+            Invoke-QuarantineVersion '2.3.1'
+            Test-Path (Split-Path $exe) | Should -BeFalse
+            @(Get-ChildItem $script:Root -Directory -Filter 'quarantine-2.3.1-*').Count | Should -Be 1
+        }
+        finally { Remove-Item $script:Root -Recurse -Force -ErrorAction SilentlyContinue }
+    }
+}
+
 Describe 'version-cache path helpers' {
     It 'resolves and detects an installed pinned version' {
         $script:VersionsDir = Join-Path ([IO.Path]::GetTempPath()) ("accessmcp-vtest-" + [guid]::NewGuid().ToString('N'))
