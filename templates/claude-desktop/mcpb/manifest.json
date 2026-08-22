@@ -9,7 +9,9 @@
     "url": "https://access-mcp.ai"
   },
   "homepage": "https://access-mcp.ai",
-  "privacy_policies": ["https://access-mcp.ai/privacy"],
+  "privacy_policies": [
+    "https://access-mcp.ai/privacy"
+  ],
   "server": {
     "type": "binary",
     "entry_point": "accessmcp.exe",
@@ -19,7 +21,15 @@
     }
   },
   "compatibility": {
-    "platforms": ["win32"]
+    "platforms": [
+      "win32"
+    ]
   },
-  "keywords": ["microsoft-access", "accdb", "database", "vba", "windows"]
+  "keywords": [
+    "microsoft-access",
+    "accdb",
+    "database",
+    "vba",
+    "windows"
+  ]
 }
