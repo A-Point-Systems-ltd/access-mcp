@@ -1,32 +1,19 @@
-# Build output
-bin/
-obj/
+# No binaries in git — ever. Release assets live in GitHub Releases;
+# the bootstrap installs the exe under %LOCALAPPDATA%, not here.
 *.exe
 *.dll
-*.pdb
+*.mcpb
+*.zip
+*.msi
+bin/
+node_modules/
 
-# IDE
-.vs/
-.vscode/
-*.suo
-*.user
-
-# OS
-Thumbs.db
-desktop.ini
-.DS_Store
-
-# Secrets
-*.env
-appsettings.*.json
-!appsettings.json
-
-# Logs
-*.log
-logs/
-
-# Access databases (don't commit real data)
+# Access artifacts never belong in the public dist repo
 *.accdb
 *.mdb
 *.laccdb
-*.ldb
+*.adp
+
+# local scratch
+*.log
+.DS_Store

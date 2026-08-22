@@ -74,7 +74,7 @@ access-mcp/
       mcp.json, skills/**, bootstrap/**, templates/**, release-manifest.json), לא
       `copy packaging/**`; מקור העריכה נשאר בריפו המוצר, sync רק ב־workflow.
 - [ ] **CI עצמאי בריפו הזה** (רץ על כל push, גם ידני): secret scan · סריקת
-      דומיינים/נתיבים פנימיים (`ImplementationPlan/`, ‏sandbox, ‏`.dev.vars`) ·
+      דומיינים/נתיבים פנימיים (נתיבי ריפו־המוצר הפנימיים, ‏sandbox, ‏`.dev.vars`) ·
       סוגי קבצים אסורים (`*.sql`, `*.accdb`) · `claude plugin validate --strict` ·
       ולידציית מניפסטים. פרסום ציבורי שגוי הוא בלתי הפיך — השער הזה חובה לפני
       ה־Release הראשון.

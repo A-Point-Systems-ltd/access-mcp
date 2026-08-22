@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "accessmcp": {
+      "type": "stdio",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "__PLUGIN_ROOT__/bootstrap/bootstrap.ps1"
+      ]
+    }
+  }
+}
