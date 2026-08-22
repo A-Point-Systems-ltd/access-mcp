@@ -8,7 +8,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "__PLUGIN_ROOT__/bootstrap/bootstrap.ps1"
+        "${PLUGIN_ROOT}/bootstrap/bootstrap.ps1"
       ]
     }
   }

@@ -48,6 +48,7 @@ const FORBIDDEN_FILES = [
   /(^|\/)\.env(\..*)?$/,
   /\.(sql|accdb|mdb|laccdb|adp)$/i,
   /\.(exe|dll|mcpb|zip|7z|msi)$/i, // binaries never live in git here
+  /\.(pfx|p12|pem|key|cer|der|jks|keystore)$/i, // key material — especially once the EV cert exists
   /(^|\/)wrangler\.toml$/,
 ];
 const FORBIDDEN_CONTENT = [
@@ -91,16 +92,28 @@ const versions = new Map();
 if (marketplace?.plugins?.[0]?.version) versions.set('.claude-plugin/marketplace.json', marketplace.plugins[0].version);
 if (claudePlugin?.version) versions.set('claude-plugin plugin.json', claudePlugin.version);
 if (agentPlugin?.version) versions.set('agent-plugin/plugin.json', agentPlugin.version);
+// The pinned release manifests are part of the same agreement — a manifest
+// drifting to 9.9.9 while the plugins say 2.3.1 must fail here, not only in
+// the release pipeline (review round 3, §7).
+if (agentManifest?.version) versions.set('agent-plugin release-manifest.json', agentManifest.version);
+if (claudeManifest?.version) versions.set('claude-plugin release-manifest.json', claudeManifest.version);
 if (new Set(versions.values()).size > 1) {
   err(`version mismatch across manifests: ${[...versions].map(([k, v]) => `${k}=${v}`).join(', ')}`);
+}
+if (!agentPlugin?.$schema || !/agent-plugins\.org\/schemas\//.test(agentPlugin.$schema)) {
+  err('agent-plugin/plugin.json: missing the Agent Plugins 1.0 $schema declaration');
 }
 for (const [label, m] of [['agent-plugin', agentManifest], ['claude-plugin', claudeManifest]]) {
   if (!m) continue;
   for (const f of ['version', 'exe_url', 'exe_sha256']) {
     if (!m[f]) err(`${label} release-manifest.json: missing '${f}'`);
   }
-  if (m.exe_url && !/^https:\/\/github\.com\/A-Point-Systems-ltd\/access-mcp\/releases\/download\/v[^/]+\/accessmcp\.exe$/.test(m.exe_url)) {
+  const urlTag = m.exe_url?.match(/^https:\/\/github\.com\/A-Point-Systems-ltd\/access-mcp\/releases\/download\/v([^/]+)\/accessmcp\.exe$/)?.[1];
+  if (m.exe_url && !urlTag) {
     err(`${label} release-manifest.json: exe_url must be a version-pinned release asset URL, got ${m.exe_url}`);
+  }
+  if (urlTag && m.version && urlTag !== m.version) {
+    err(`${label} release-manifest.json: exe_url tag v${urlTag} != version ${m.version}`);
   }
   if (m.exe_sha256 && !/^[0-9a-fA-F]{64}$/.test(m.exe_sha256)) {
     err(`${label} release-manifest.json: exe_sha256 is not 64 hex chars`);
@@ -137,17 +150,31 @@ compareTrees(join(root, 'agent-plugin/skills'), join(root, 'claude-plugin/skills
 compareTrees(join(root, 'agent-plugin/bootstrap'), join(root, 'claude-plugin/bootstrap'), 'claude-plugin bootstrap');
 
 // --------------------------------------- 4. adapter token substitution -----
+// Canonical package = Agent Plugins 1.0, so it uses the STANDARD
+// ${PLUGIN_ROOT} variable (consumable as-is by Cursor / VS Code). The
+// Claude adapter is derived by substituting ${CLAUDE_PLUGIN_ROOT}.
 const agentMcp = read(join(root, 'agent-plugin/mcp.json'));
-if (!agentMcp.includes('__PLUGIN_ROOT__')) {
-  err('agent-plugin/mcp.json: expected the __PLUGIN_ROOT__ template token');
+if (!agentMcp.includes('${PLUGIN_ROOT}')) {
+  err('agent-plugin/mcp.json: expected the standard ${PLUGIN_ROOT} variable (Agent Plugins 1.0)');
+}
+if (agentMcp.includes('__PLUGIN_ROOT__')) {
+  err('agent-plugin/mcp.json: legacy __PLUGIN_ROOT__ token — the canonical package uses ${PLUGIN_ROOT}');
 }
 const claudeMcpPath = join(root, 'claude-plugin/.mcp.json');
 const claudeMcp = read(claudeMcpPath);
-if (claudeMcp.includes('__PLUGIN_ROOT__')) {
-  err('claude-plugin/.mcp.json: raw __PLUGIN_ROOT__ token — adapter substitution did not happen');
+if (claudeMcp.includes('${PLUGIN_ROOT}') || claudeMcp.includes('__PLUGIN_ROOT__')) {
+  err('claude-plugin/.mcp.json: un-substituted plugin-root token — adapter derivation did not happen');
 }
 if (!claudeMcp.includes('${CLAUDE_PLUGIN_ROOT}')) {
   err('claude-plugin/.mcp.json: expected ${CLAUDE_PLUGIN_ROOT} in the bootstrap path');
+}
+// Adapter manifest = canonical manifest minus $schema (Claude Code is not
+// an Agent Plugins consumer); everything else must match.
+if (claudePlugin && agentPlugin) {
+  const { $schema: _s, ...agentRest } = agentPlugin;
+  if (JSON.stringify(claudePlugin) !== JSON.stringify(agentRest)) {
+    err('claude-plugin plugin.json drifted from agent-plugin/plugin.json (expected: identical minus $schema)');
+  }
 }
 const claudeMcpJson = readJson(claudeMcpPath);
 const server = claudeMcpJson?.mcpServers?.accessmcp;

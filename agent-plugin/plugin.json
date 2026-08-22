@@ -1,4 +1,5 @@
 {
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "accessmcp",
   "version": "2.3.1",
   "description": "Microsoft Access tools for AI agents: inspect schemas, read and write data, edit VBA, run health reports. Free account included — read tools are free, write tools come with the trial and Pro.",

@@ -46,3 +46,16 @@ jobs:
           [void][System.Management.Automation.Language.Parser]::ParseFile(
             "$PWD/agent-plugin/bootstrap/bootstrap.ps1", [ref]$null, [ref]$errs)
           if ($errs) { $errs | ForEach-Object { Write-Error $_.Message }; exit 1 }
+
+      # Real tests for the bootstrap's logic (manifest shape incl. the
+      # URL-tag/version guard, version compare, atomic JSON, cache paths).
+      # The ACCESSMCP_BOOTSTRAP_TEST hook loads functions without Windows
+      # paths or network, so these run on the Linux runner too.
+      - name: Bootstrap unit tests (Pester)
+        shell: pwsh
+        run: |
+          $cfg = New-PesterConfiguration
+          $cfg.Run.Path = 'tests/bootstrap.tests.ps1'
+          $cfg.Run.Exit = $true
+          $cfg.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $cfg

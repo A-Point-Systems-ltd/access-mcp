@@ -1,19 +1,33 @@
-# AccessMCP bootstrap — launches accessmcp.exe from the canonical versioned
-# install, downloading and verifying it first when needed.
+# AccessMCP bootstrap — launches the accessmcp.exe version this plugin is
+# pinned to, from the shared version cache, downloading and verifying it
+# first when needed.
 #
-# THE CONTRACT (plugin-platforms-development-plan §2.2–§2.3):
+# THE CONTRACT (plugin-platforms-development-plan §2.2–§2.3, review round 3):
 #   * stdout belongs to the MCP protocol. This script NEVER writes to stdout;
 #     everything it has to say goes to stderr.
-#   * The canonical install root is versioned. A running exe is never replaced
-#     in place; a new version is staged side by side and an atomic pointer
-#     (current.json) flips to it. Existing processes keep their version.
-#   * The local release-manifest.json (next to this script) is the PINNED
-#     MINIMUM known-good version. The remote manifest check is best-effort
-#     with a short timeout; offline never blocks a valid local install.
+#   * THREE INSTALL FAMILIES, deliberately separate:
+#       plugins  → shared VERSION CACHE (%LOCALAPPDATA%\Programs\AccessMCP\
+#                  versions\<v>\accessmcp.exe), each plugin runs EXACTLY the
+#                  version its release-manifest.json pins. Two plugins pinned
+#                  to the same version share one copy; plugins pinned to
+#                  different versions are isolated — one client updating
+#                  never changes what another client runs.
+#       manual / install-accessmcp.ps1 → a standalone exe wherever the user
+#                  put it. The bootstrap neither uses nor touches it.
+#       Claude Desktop .mcpb → its own bundled exe.
+#   * The pin is EXACT, not a minimum: if the pinned version cannot be run
+#     or obtained, the bootstrap FAILS with instructions — it does not
+#     silently run something older or newer. (Escape hatch for emergencies:
+#     ACCESSMCP_PIN_FALLBACK=allow runs the newest cached version instead,
+#     loudly.) Offline is never blocked once the pinned version is cached.
 #   * Binaries are downloaded ONLY from the version-pinned URL inside the
-#     manifest that was read — never through a `latest` redirect (TOCTOU).
-#   * SHA256 is verified before a byte lands in versions\. After the EV
-#     certificate ships, Authenticode is verified as well (see TODO below).
+#     manifest, whose embedded tag MUST equal the manifest version — never
+#     through a `latest` redirect (TOCTOU).
+#   * SHA256 is verified before a byte lands in versions\. When the manifest
+#     says the release is signed (signing.status == 'ev'), a Valid
+#     Authenticode signature is REQUIRED as well.
+#   * No cache cleanup here: another plugin may pin any version. The
+#     installer owns cache maintenance.
 #   * This is public code: no secrets, no licensing logic, no internal
 #     endpoints. Download-and-verify, nothing else.
 #
@@ -40,33 +54,20 @@ function Fail([string] $Message, [int] $Code = 1) {
     exit $Code
 }
 
-# ---------------------------------------------------------------- platform --
-# Supported: native Windows only. WSL, Remote-SSH containers, macOS and Linux
-# are not supported (plan §6) — fail loudly with a pointer, never silently.
-if ($env:OS -ne 'Windows_NT') {
-    Fail ("AccessMCP requires native Windows with Microsoft Access installed. " +
-          "This environment is not Windows. See https://access-mcp.ai/docs/supported-platforms")
-}
-if ($env:WSL_DISTRO_NAME) {
-    Fail ("AccessMCP cannot run inside WSL — it needs native Windows COM access " +
-          "to Microsoft Access. Run your MCP client on Windows itself. " +
-          "See https://access-mcp.ai/docs/supported-platforms")
-}
-
-# ------------------------------------------------------------------- paths --
-$Root         = Join-Path $env:LOCALAPPDATA 'Programs\AccessMCP'
-$VersionsDir  = Join-Path $Root 'versions'
-$CurrentJson  = Join-Path $Root 'current.json'
-$CheckStamp   = Join-Path $Root 'update-check.json'
-$LocalManifestPath = Join-Path $PSScriptRoot 'release-manifest.json'
-
+# -------------------------------------------------------------- constants --
 $RemoteManifestUrl = 'https://github.com/A-Point-Systems-ltd/access-mcp/releases/latest/download/release-manifest.json'
 $RemoteTimeoutSec  = 3
+$DownloadTimeoutSec = 300
 $CheckIntervalHours = 24
 
-New-Item -ItemType Directory -Force -Path $VersionsDir | Out-Null
-
 # ------------------------------------------------------------------ helpers --
+function Get-Prop($Object, [string] $Name) {
+    # StrictMode-safe property access on ConvertFrom-Json output.
+    if ($null -eq $Object) { return $null }
+    $p = $Object.PSObject.Properties[$Name]
+    if ($p) { $p.Value } else { $null }
+}
+
 function Read-Json([string] $Path) {
     if (-not (Test-Path -LiteralPath $Path)) { return $null }
     try { Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json }
@@ -94,12 +95,19 @@ function Compare-Version([string] $A, [string] $B) {
 
 function Assert-ManifestShape($Manifest, [string] $Origin) {
     foreach ($field in 'version', 'exe_sha256', 'exe_url') {
-        if (-not ($Manifest.PSObject.Properties.Name -contains $field) -or -not $Manifest.$field) {
+        if (-not (Get-Prop $Manifest $field)) {
             throw "release manifest from $Origin is missing '$field'"
         }
     }
-    if ($Manifest.exe_url -notmatch '^https://github\.com/A-Point-Systems-ltd/access-mcp/releases/download/v[^/]+/accessmcp\.exe$') {
+    $m = [regex]::Match([string] $Manifest.exe_url,
+        '^https://github\.com/A-Point-Systems-ltd/access-mcp/releases/download/v([^/]+)/accessmcp\.exe$')
+    if (-not $m.Success) {
         throw "release manifest from $Origin has an exe_url outside the pinned release pattern: $($Manifest.exe_url)"
+    }
+    # The URL's own tag must be the manifest's version — a manifest claiming
+    # 2.5.0 must not hand out 2.4.0 bytes (review round 3, §8).
+    if ($m.Groups[1].Value -ne [string] $Manifest.version) {
+        throw "release manifest from ${Origin}: exe_url tag v$($m.Groups[1].Value) != version $($Manifest.version)"
     }
     if ($Manifest.exe_sha256 -notmatch '^[0-9a-fA-F]{64}$') {
         throw "release manifest from $Origin has a malformed exe_sha256 (placeholder not stamped?)"
@@ -119,17 +127,22 @@ function Install-Version($Manifest) {
     try {
         $tmpExe = Join-Path $staging 'accessmcp.exe'
         [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
-        Invoke-WebRequest -Uri $Manifest.exe_url -OutFile $tmpExe -UseBasicParsing
+        Invoke-WebRequest -Uri $Manifest.exe_url -OutFile $tmpExe -UseBasicParsing -TimeoutSec $DownloadTimeoutSec
 
         $actual = (Get-FileHash -LiteralPath $tmpExe -Algorithm SHA256).Hash
-        if ($actual -ne $Manifest.exe_sha256.ToUpperInvariant()) {
+        if ($actual -ne ([string] $Manifest.exe_sha256).ToUpperInvariant()) {
             throw "SHA256 mismatch for $($Manifest.exe_url): expected $($Manifest.exe_sha256), got $actual"
         }
 
-        # TODO(EV certificate — plan decision ה-5): once releases are signed,
-        # verify here and refuse anything unsigned:
-        #   $sig = Get-AuthenticodeSignature -LiteralPath $tmpExe
-        #   if ($sig.Status -ne 'Valid') { throw "Authenticode: $($sig.Status)" }
+        # Once the manifest declares a signed release, an unsigned or
+        # tampered exe is a hard failure — not a warning.
+        $signing = Get-Prop $Manifest 'signing'
+        if ($signing -and (Get-Prop $signing 'status') -eq 'ev') {
+            $sig = Get-AuthenticodeSignature -LiteralPath $tmpExe
+            if ($sig.Status -ne 'Valid') {
+                throw "Authenticode verification failed ($($sig.Status)) for a release the manifest says is signed"
+            }
+        }
 
         New-Item -ItemType Directory -Force -Path $destDir | Out-Null
         Move-Item -LiteralPath $tmpExe -Destination $destExe -Force
@@ -140,46 +153,57 @@ function Install-Version($Manifest) {
     }
 }
 
-function Set-Current([string] $Version) {
-    Write-JsonAtomic ([pscustomobject]@{
-        version    = $Version
-        path       = (Get-ExePathFor $Version)
-        updated_at = (Get-Date).ToUniversalTime().ToString('o')
-    }) $CurrentJson
-}
-
-function Get-Prop($Object, [string] $Name) {
-    # StrictMode-safe property access on ConvertFrom-Json output.
-    if ($null -eq $Object) { return $null }
-    $p = $Object.PSObject.Properties[$Name]
-    if ($p) { $p.Value } else { $null }
-}
-
-function Get-RemoteManifest {
-    # Best-effort, throttled. Never the reason a working install fails.
-    $stamp = Read-Json $CheckStamp
-    if ($stamp -and (Get-Prop $stamp 'checked_at')) {
-        try {
-            $age = (Get-Date).ToUniversalTime() - [datetime]::Parse((Get-Prop $stamp 'checked_at')).ToUniversalTime()
-            if ($age.TotalHours -lt $CheckIntervalHours) { return $null }
-        } catch { }
-    }
+function Write-UpdateNotice([string] $PinnedVersion) {
+    # Best-effort, throttled awareness only. It NEVER changes what runs —
+    # updates arrive by updating the plugin (which moves the pin). Never the
+    # reason a launch fails.
     try {
+        $stamp = Read-Json $CheckStamp
+        if ($stamp -and (Get-Prop $stamp 'checked_at')) {
+            $age = (Get-Date).ToUniversalTime() - [datetime]::Parse((Get-Prop $stamp 'checked_at')).ToUniversalTime()
+            if ($age.TotalHours -lt $CheckIntervalHours) { return }
+        }
         [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
         $resp = Invoke-WebRequest -Uri $RemoteManifestUrl -UseBasicParsing -TimeoutSec $RemoteTimeoutSec
-        $manifest = $resp.Content | ConvertFrom-Json
-        Assert-ManifestShape $manifest 'remote'
+        $remote = $resp.Content | ConvertFrom-Json
+        Assert-ManifestShape $remote 'remote'
         Write-JsonAtomic ([pscustomobject]@{ checked_at = (Get-Date).ToUniversalTime().ToString('o') }) $CheckStamp
-        return $manifest
+        if ((Compare-Version ([string] $remote.version) $PinnedVersion) -gt 0) {
+            Write-Err ("a newer AccessMCP ($($remote.version)) is published; this plugin pins $PinnedVersion. " +
+                       "Update the plugin to move up — https://access-mcp.ai/whats-new")
+        }
     }
     catch {
-        Write-Err "update check skipped ($($_.Exception.Message)) — continuing with the local install"
-        Write-JsonAtomic ([pscustomobject]@{ checked_at = (Get-Date).ToUniversalTime().ToString('o') }) $CheckStamp
-        return $null
+        try { Write-JsonAtomic ([pscustomobject]@{ checked_at = (Get-Date).ToUniversalTime().ToString('o') }) $CheckStamp } catch { }
     }
 }
 
 # --------------------------------------------------------------- main logic --
+# Test hook: dot-source the functions without running the launcher (works on
+# any OS — everything below this line is Windows-only).
+if ($env:ACCESSMCP_BOOTSTRAP_TEST -eq '1') { return }
+
+# ---------------------------------------------------------------- platform --
+# Supported: native Windows only. WSL, Remote-SSH containers, macOS and Linux
+# are not supported (plan §6) — fail loudly with a pointer, never silently.
+if ($env:OS -ne 'Windows_NT') {
+    Fail ("AccessMCP requires native Windows with Microsoft Access installed. " +
+          "This environment is not Windows. See https://access-mcp.ai/docs#supported-platforms")
+}
+if ($env:WSL_DISTRO_NAME) {
+    Fail ("AccessMCP cannot run inside WSL — it needs native Windows COM access " +
+          "to Microsoft Access. Run your MCP client on Windows itself. " +
+          "See https://access-mcp.ai/docs#supported-platforms")
+}
+
+# ------------------------------------------------------------------- paths --
+$Root         = Join-Path $env:LOCALAPPDATA 'Programs\AccessMCP'
+$VersionsDir  = Join-Path $Root 'versions'
+$CheckStamp   = Join-Path $Root 'update-check.json'
+$LocalManifestPath = Join-Path $PSScriptRoot 'release-manifest.json'
+
+New-Item -ItemType Directory -Force -Path $VersionsDir | Out-Null
+
 $localManifest = Read-Json $LocalManifestPath
 if (-not $localManifest) { Fail "missing or unreadable $LocalManifestPath — the plugin package is broken; reinstall the plugin" }
 try { Assert-ManifestShape $localManifest 'the plugin' }
@@ -187,66 +211,47 @@ catch { Fail $_.Exception.Message }
 
 $pinned = [string] $localManifest.version
 
-# One bootstrap at a time per user — parallel clients must not race the install.
+# One bootstrap at a time per user — parallel clients must not race the
+# install. An abandoned mutex (a previous bootstrap crashed while holding
+# it) still counts as acquired: every on-disk mutation here is atomic, so
+# the state is consistent regardless of where the holder died.
 $mutex = New-Object System.Threading.Mutex($false, 'Local\AccessMCP.Bootstrap')
-$null = $mutex.WaitOne()
+try { $null = $mutex.WaitOne() }
+catch [System.Threading.AbandonedMutexException] { }
 try {
-    $current = Read-Json $CurrentJson
-
-    # 1. Make sure at least the pinned version is installed.
-    $haveCurrent = ($current -and (Test-InstalledVersion (Get-Prop $current 'version')))
-    $satisfiesPin = $haveCurrent -and ((Compare-Version $current.version $pinned) -ge 0)
-
-    if (-not $satisfiesPin) {
-        if (Test-InstalledVersion $pinned) {
-            Set-Current $pinned
-        }
-        else {
-            try { Install-Version $localManifest; Set-Current $pinned }
-            catch {
-                if ($haveCurrent) {
-                    # An older-but-valid install beats no install; warn and run it.
-                    Write-Err "could not install $pinned ($($_.Exception.Message)); running installed $($current.version)"
-                }
-                else {
-                    Fail ("could not install accessmcp.exe $pinned ($($_.Exception.Message)). " +
-                          "Check your network, or download it manually from " +
-                          "https://github.com/A-Point-Systems-ltd/access-mcp/releases and run install-accessmcp.ps1")
-                }
+    if (-not (Test-InstalledVersion $pinned)) {
+        try { Install-Version $localManifest }
+        catch {
+            $cached = @(Get-ChildItem -LiteralPath $VersionsDir -Directory -ErrorAction SilentlyContinue |
+                Where-Object { Test-InstalledVersion $_.Name } |
+                Sort-Object { [version] $_.Name } -Descending)
+            if ($env:ACCESSMCP_PIN_FALLBACK -eq 'allow' -and $cached.Count -gt 0) {
+                $pinned = $cached[0].Name
+                Write-Err ("PIN FALLBACK: could not install the pinned version ($($_.Exception.Message)); " +
+                           "running cached $pinned because ACCESSMCP_PIN_FALLBACK=allow")
+            }
+            else {
+                $hint = if ($cached.Count -gt 0) {
+                    "Cached versions exist (" + (($cached | ForEach-Object { $_.Name }) -join ', ') + ") but this plugin pins $pinned exactly; " +
+                    "set ACCESSMCP_PIN_FALLBACK=allow only as a temporary escape hatch."
+                } else { "" }
+                Fail ("could not install the pinned accessmcp.exe $pinned ($($_.Exception.Message)). " + $hint +
+                      " Check your network, update/reinstall the plugin, or download the exe manually from " +
+                      "https://github.com/A-Point-Systems-ltd/access-mcp/releases and point your MCP config at it directly.")
             }
         }
-        $current = Read-Json $CurrentJson
     }
-
-    # 2. Best-effort: is there something newer than what we run?
-    $remote = Get-RemoteManifest
-    if ($remote -and ((Compare-Version $remote.version $current.version) -gt 0)) {
-        try { Install-Version $remote; Set-Current $remote.version; $current = Read-Json $CurrentJson }
-        catch { Write-Err "staging $($remote.version) failed ($($_.Exception.Message)); staying on $($current.version)" }
-    }
-
-    # 3. Opportunistic cleanup: keep current + one previous version for rollback.
-    try {
-        $keep = @($current.version)
-        $installed = @(Get-ChildItem -LiteralPath $VersionsDir -Directory |
-            Where-Object { Test-InstalledVersion $_.Name } |
-            Sort-Object { [version] $_.Name } -Descending)
-        if ($installed.Count -gt 1) { $keep += $installed[1].Name }
-        foreach ($dir in $installed) {
-            if ($keep -notcontains $dir.Name) {
-                Remove-Item -LiteralPath $dir.FullName -Recurse -Force -ErrorAction SilentlyContinue
-            }
-        }
-    } catch { }   # cleanup must never block a launch
 }
 finally {
     $mutex.ReleaseMutex()
     $mutex.Dispose()
 }
 
+Write-UpdateNotice $pinned
+
 # ------------------------------------------------------------------- launch --
-$exe = [string] $current.path
-if (-not (Test-Path -LiteralPath $exe)) { Fail "current.json points at a missing exe ($exe); delete $CurrentJson and retry" }
+$exe = Get-ExePathFor $pinned
+if (-not (Test-Path -LiteralPath $exe)) { Fail "pinned exe vanished after install ($exe) — reinstall the plugin" }
 
 & $exe @ExeArgs
 exit $LASTEXITCODE
