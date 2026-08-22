@@ -41,6 +41,13 @@ Deliberately separate install families:
    puts it; the bootstrap neither uses nor touches it.
 3. **Claude Desktop `.mcpb`** → its own bundled exe.
 
+Platform nuance: on macOS/Linux the plugin fails before the bootstrap can
+even print its explanatory error — `powershell.exe` does not exist there, so
+the client surfaces its own "command not found". That is accepted (plan §6):
+manifests declare Windows-only wherever the format allows, and the docs say
+it plainly; no cross-platform launcher will be built to prettify a platform
+we do not support.
+
 The direct-download contract is untouched by all of this: a bare
 `accessmcp.exe` pointed at by a hand-written `mcp.json` keeps working with
 none of these files present. Full contract:
