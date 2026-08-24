@@ -142,16 +142,16 @@ Describe 'Assert-ExeTrusted / Test-CachedVersion (version + BYTES pin)' {
         New-Item -ItemType Directory -Force -Path (Split-Path $exe) | Out-Null
         [IO.File]::WriteAllText($exe, 'unsigned era bytes')
         $hash = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash
-        $m = New-Manifest @{ exe_sha256 = $hash; signing = [pscustomobject]@{ status = 'unsigned'; subject = ''; thumbprint = '' } }
+        $m = New-Manifest @{ exe_sha256 = $hash; signing = [pscustomobject]@{ status = 'unsigned'; subject = ''; durable_identity_oid = '' } }
         { Assert-ExeTrusted $exe $m } | Should -Not -Throw
     }
 
-    It 'demands a signature the moment the manifest says ev (plain file must fail)' {
+    It 'demands a signature the moment the manifest says signed (plain file must fail)' {
         $exe = Get-ExePathFor '2.3.1'
         New-Item -ItemType Directory -Force -Path (Split-Path $exe) | Out-Null
         [IO.File]::WriteAllText($exe, 'bytes that are not signed')
         $hash = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash
-        $m = New-Manifest @{ exe_sha256 = $hash; signing = [pscustomobject]@{ status = 'ev'; subject = 'A-Point Systems Ltd'; thumbprint = 'AB12' } }
+        $m = New-Manifest @{ exe_sha256 = $hash; signing = [pscustomobject]@{ status = 'signed'; subject = 'A-Point Systems Ltd'; durable_identity_oid = '1.3.6.1.4.1.311.97.999999.1' } }
         { Assert-ExeTrusted $exe $m } | Should -Throw '*Authenticode*'
     }
 }

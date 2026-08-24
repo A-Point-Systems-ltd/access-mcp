@@ -27,8 +27,10 @@
 #     versions\ AND on every cache hit before launch — a directory named
 #     right but holding the wrong exe is quarantined and re-fetched, never
 #     run. When the manifest says the release is signed (signing.status ==
-#     'ev'), a Valid Authenticode signature from OUR pinned certificate
-#     (thumbprint, and subject when given) is REQUIRED as well.
+#     'signed'), a Valid Authenticode signature is REQUIRED, from a cert
+#     carrying the Code Signing EKU and OUR Durable Identity EKU (Azure
+#     Artifact Signing rotates certs, so the pin is the durable EKU — not a
+#     thumbprint), with Subject as defense-in-depth.
 #   * No cache cleanup here: another plugin may pin any version. The
 #     installer owns cache maintenance.
 #   * This is public code: no secrets, no licensing logic, no internal
@@ -126,18 +128,33 @@ function Assert-ExeTrusted([string] $Path, $Manifest) {
         throw "SHA256 mismatch for ${Path}: expected $($Manifest.exe_sha256), got $actual"
     }
     # Once the manifest declares a signed release, an unsigned or tampered
-    # exe is a hard failure — and 'Valid' alone is not enough: the signature
-    # must be OUR certificate, pinned by thumbprint (and subject when given),
-    # so any other validly-signed binary is still rejected.
+    # exe is a hard failure — and 'Valid' alone is not enough. Azure
+    # Artifact Signing rotates short-lived certificates, so a thumbprint
+    # pin is useless; the stable publisher identity is the
+    # subscriber-specific Durable Identity EKU Microsoft embeds in every
+    # cert it issues to us. Enforcement chain:
+    #   Valid Authenticode (trusted chain)
+    #   → Code Signing EKU present
+    #   → OUR Durable Identity EKU present (when the manifest pins one)
+    #   → Subject match as defense-in-depth (when the manifest gives one)
     $signing = Get-Prop $Manifest 'signing'
-    if ($signing -and (Get-Prop $signing 'status') -eq 'ev') {
+    $status = if ($signing) { [string] (Get-Prop $signing 'status') } else { '' }
+    if ($status -and $status -ne 'unsigned') {
         $sig = Get-AuthenticodeSignature -LiteralPath $Path
         if ($sig.Status -ne 'Valid') {
             throw "Authenticode verification failed ($($sig.Status)) for a release the manifest says is signed"
         }
-        $wantThumb = [string] (Get-Prop $signing 'thumbprint')
-        if ($wantThumb -and ($sig.SignerCertificate.Thumbprint -ne $wantThumb.ToUpperInvariant())) {
-            throw "Authenticode signer thumbprint $($sig.SignerCertificate.Thumbprint) != pinned $wantThumb"
+        $ekus = @(
+            $sig.SignerCertificate.Extensions |
+                Where-Object { $_ -is [Security.Cryptography.X509Certificates.X509EnhancedKeyUsageExtension] } |
+                ForEach-Object { $_.EnhancedKeyUsages } | ForEach-Object { $_.Value }
+        )
+        if ($ekus -notcontains '1.3.6.1.5.5.7.3.3') {
+            throw "signer certificate lacks the Code Signing EKU"
+        }
+        $wantOid = [string] (Get-Prop $signing 'durable_identity_oid')
+        if ($wantOid -and ($ekus -notcontains $wantOid)) {
+            throw "signer certificate lacks our Durable Identity EKU ($wantOid) — signed, but not by A-Point"
         }
         $wantSubject = [string] (Get-Prop $signing 'subject')
         if ($wantSubject -and ($sig.SignerCertificate.Subject -notlike "*$wantSubject*")) {
