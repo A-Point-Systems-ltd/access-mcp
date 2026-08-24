@@ -54,6 +54,11 @@ jobs:
       - name: Bootstrap unit tests (Pester)
         shell: pwsh
         run: |
+          # Runners currently preinstall Pester, but that is not a contract —
+          # pin v5 explicitly so CI cannot break under us (PR #1 review).
+          if (-not (Get-Module -ListAvailable Pester | Where-Object { $_.Version.Major -ge 5 })) {
+            Install-Module Pester -MinimumVersion 5.0 -Force -Scope CurrentUser -SkipPublisherCheck
+          }
           $cfg = New-PesterConfiguration
           $cfg.Run.Path = 'tests/bootstrap.tests.ps1'
           $cfg.Run.Exit = $true

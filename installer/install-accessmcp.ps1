@@ -261,10 +261,13 @@ function Backup-ConfigFile {
 # One argument list, used for every client, so two configs on the same machine
 # can never disagree about how the exe is started.
 function Get-ServerArguments {
+    # Return the array PLAIN (no unary comma): every call site collects with
+    # @(...), and `,$a` + @() nested the array — configs came out with
+    # args: [[]] instead of args: [] (PR #1 review finding).
     [string[]]$a = @()
     if ($DatabasePath -and $DatabasePath.Trim() -ne '') { $a += $DatabasePath }
     if ($ReadOnly) { $a += '--read-only' }
-    return ,$a
+    return $a
 }
 
 # --stdio is deliberately absent: accessmcp.exe speaks stdio and nothing else,
