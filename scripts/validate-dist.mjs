@@ -202,7 +202,10 @@ if (existsSync(skillsDir)) {
     const skillMd = join(skillsDir, name, 'SKILL.md');
     if (!existsSync(skillMd)) { err(`agent-plugin/skills/${name}: missing SKILL.md`); continue; }
     const body = read(skillMd);
-    const fm = body.match(/^---\n([\s\S]*?)\n---/);
+    // \r?\n, not \n: the release job syncs+validates on a WINDOWS runner,
+    // where git checks files out with CRLF — the exact-\n form rejected
+    // every SKILL.md there while passing on every Linux runner (run #3).
+    const fm = body.match(/^---\r?\n([\s\S]*?)\r?\n---/);
     if (!fm) { err(`skills/${name}/SKILL.md: missing frontmatter`); continue; }
     if (!/^name:\s*\S+/m.test(fm[1])) err(`skills/${name}/SKILL.md: frontmatter missing 'name'`);
     if (!/^description:\s*\S+/m.test(fm[1])) err(`skills/${name}/SKILL.md: frontmatter missing 'description'`);
