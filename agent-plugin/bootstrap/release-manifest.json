@@ -1,0 +1,12 @@
+{
+  "_note": "Pinned minimum known-good release for the bootstrap (plan §2.3). Stamped by the product repo's release workflow — do not edit by hand. All-zero sha256 = not yet stamped by any release; the release pipeline must refuse to ship it.",
+  "version": "2.3.1",
+  "exe_url": "https://github.com/A-Point-Systems-ltd/access-mcp/releases/download/v2.3.1/accessmcp.exe",
+  "exe_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "source_commit": "",
+  "build_run_id": "",
+  "built_at": "",
+  "mcpb_sha256": "",
+  "signing": { "status": "unsigned", "subject": "", "durable_identity_oid": "" },
+  "supported_os": ["windows-x64"]
+}

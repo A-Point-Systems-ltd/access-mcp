@@ -1,0 +1,66 @@
+# Independent CI for the PUBLIC dist repo (plan §2.5).
+#
+# This repo is the supply-chain boundary: everything in it is public the
+# moment it lands. The product repo's sync workflow runs the same validator
+# before pushing here — this workflow re-runs it on EVERY push (manual pushes
+# included), so nothing rides in around the gate.
+name: dist-ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+
+      # Supply-chain scans + manifest agreement + adapter drift + skills
+      # frontmatter — one script, same one the sync workflow runs.
+      - name: Validate dist tree
+        run: node scripts/validate-dist.mjs
+
+      # Belt and braces: nothing binary-shaped slipped into git even if the
+      # validator's list lags. (git ls-files, so .gitignore can't hide it.)
+      - name: No binaries tracked by git
+        run: |
+          bad=$(git ls-files | grep -Ei '\.(exe|dll|mcpb|zip|7z|msi|accdb|mdb|laccdb)$' || true)
+          if [ -n "$bad" ]; then
+            echo "Binary/database files tracked in the public dist repo:" >&2
+            echo "$bad" >&2
+            exit 1
+          fi
+
+      # PowerShell syntax check for the bootstrap (parser only, runs anywhere).
+      - name: Parse bootstrap.ps1
+        shell: pwsh
+        run: |
+          $errs = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile(
+            "$PWD/agent-plugin/bootstrap/bootstrap.ps1", [ref]$null, [ref]$errs)
+          if ($errs) { $errs | ForEach-Object { Write-Error $_.Message }; exit 1 }
+
+      # Real tests for the bootstrap's logic (manifest shape incl. the
+      # URL-tag/version guard, version compare, atomic JSON, cache paths).
+      # The ACCESSMCP_BOOTSTRAP_TEST hook loads functions without Windows
+      # paths or network, so these run on the Linux runner too.
+      - name: Bootstrap unit tests (Pester)
+        shell: pwsh
+        run: |
+          # Runners currently preinstall Pester, but that is not a contract —
+          # pin v5 explicitly so CI cannot break under us (PR #1 review).
+          if (-not (Get-Module -ListAvailable Pester | Where-Object { $_.Version.Major -ge 5 })) {
+            Install-Module Pester -MinimumVersion 5.0 -Force -Scope CurrentUser -SkipPublisherCheck
+          }
+          $cfg = New-PesterConfiguration
+          $cfg.Run.Path = 'tests/bootstrap.tests.ps1'
+          $cfg.Run.Exit = $true
+          $cfg.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $cfg

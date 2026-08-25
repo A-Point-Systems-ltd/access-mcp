@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "accessmcp",
+  "description": "Microsoft Access tools for AI agents, from A-Point Systems.",
+  "owner": {
+    "name": "A-Point Systems Ltd",
+    "url": "https://access-mcp.ai"
+  },
+  "plugins": [
+    {
+      "name": "accessmcp",
+      "source": "./claude-plugin",
+      "description": "Microsoft Access tools for AI agents: inspect schemas, read and write data, edit VBA, run health reports. Free account included — read tools are free, write tools come with the trial and Pro.",
+      "version": "2.3.1",
+      "author": {
+        "name": "A-Point Systems Ltd"
+      },
+      "keywords": [
+        "microsoft-access",
+        "accdb",
+        "database",
+        "vba",
+        "windows"
+      ]
+    }
+  ]
+}

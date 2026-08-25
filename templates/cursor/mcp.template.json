@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "accessmcp": {
+      "type": "stdio",
+      "command": "C:\\Users\\YOU\\AppData\\Local\\Programs\\AccessMCP\\accessmcp.exe",
+      "args": ["C:\\Data\\YourDatabase.accdb"]
+    }
+  }
+}

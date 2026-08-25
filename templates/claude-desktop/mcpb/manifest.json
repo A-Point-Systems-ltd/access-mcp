@@ -1,0 +1,45 @@
+{
+  "manifest_version": "0.3",
+  "name": "accessmcp",
+  "display_name": "AccessMCP",
+  "version": "2.3.1",
+  "description": "Microsoft Access tools for AI agents: inspect schemas, read and write data, edit VBA, run health reports. Free account included — read tools are free, write tools come with the trial and Pro.",
+  "author": {
+    "name": "A-Point Systems Ltd",
+    "url": "https://access-mcp.ai"
+  },
+  "homepage": "https://access-mcp.ai",
+  "privacy_policies": [
+    "https://access-mcp.ai/privacy"
+  ],
+  "server": {
+    "type": "binary",
+    "entry_point": "accessmcp.exe",
+    "mcp_config": {
+      "command": "${__dirname}/accessmcp.exe",
+      "args": [
+        "${user_config.database_path}"
+      ]
+    }
+  },
+  "user_config": {
+    "database_path": {
+      "type": "file",
+      "title": "Access database",
+      "description": "The Access database (.accdb/.mdb/.adp) this server works on. AccessMCP only ever touches the file pinned here.",
+      "required": true
+    }
+  },
+  "compatibility": {
+    "platforms": [
+      "win32"
+    ]
+  },
+  "keywords": [
+    "microsoft-access",
+    "accdb",
+    "database",
+    "vba",
+    "windows"
+  ]
+}

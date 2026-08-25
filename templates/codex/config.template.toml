@@ -1,0 +1,19 @@
+# AccessMCP — OpenAI Codex CLI
+#
+# Merge this table into ~/.codex/config.toml (on Windows:
+# %USERPROFILE%\.codex\config.toml). Keep everything else in that file.
+#
+# Single quotes make this a TOML *literal* string, so the Windows backslashes
+# need no escaping. If your user name contains an apostrophe, use a basic
+# string instead and double every backslash:
+#   command = "C:\\Users\\O'Brien\\AppData\\Local\\Programs\\AccessMCP\\accessmcp.exe"
+
+[mcp_servers.accessmcp]
+command = 'C:\Users\YOU\AppData\Local\Programs\AccessMCP\accessmcp.exe'
+args = ['C:\Data\YourDatabase.accdb']
+
+# Optional, all verified fields of a stdio server entry:
+#   env = { SOME_VAR = "value" }     # environment for the server process
+#   startup_timeout_sec = 30         # startup + initial tool listing
+#   tool_timeout_sec = 120           # default per-tool-call timeout
+#   enabled = false                  # keep the entry, skip starting it
