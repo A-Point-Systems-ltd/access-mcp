@@ -97,7 +97,7 @@ Then, in Claude Desktop, ask for `access_login` and open a database.
   `command`/`args`/`env`. Cursor and Claude Code get `"type": "stdio"` because
   their docs show it; this packaging does not add fields a client's own
   documentation does not show.
-- The database path in `args` is **required** (v2.3.8): the server works only
+- The database path in `args` is **required** (v2.4.0): the server works only
   on the file pinned there — the safety guard against an agent opening the
   wrong (say, production) database. The full argument list is in
   [`../README.md`](../README.md).

@@ -90,7 +90,7 @@ therefore share one exe — no version drift between them.
 
 The plugin's `.mcp.json` is fixed content, so the required database pin cannot
 live there. How the plugin route pins the database is being finalized for the
-v2.3.8 rollout; until that lands, use one of the manual routes above, where
+v2.4.0 rollout; until that lands, use one of the manual routes above, where
 the pin goes in `args`.
 
 ---
@@ -106,7 +106,7 @@ database.
 
 ## Notes
 
-- The database path in `args` is **required** (v2.3.8): the server works only
+- The database path in `args` is **required** (v2.4.0): the server works only
   on the file pinned there. That is the safety guard that keeps an agent from
   opening a different (say, production) database by accident. The full argument
   list is in [`../README.md`](../README.md).

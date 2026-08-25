@@ -84,7 +84,7 @@ codex mcp list
 
 ## Notes
 
-- The database path in `args` is **required** (v2.3.8): the server works only
+- The database path in `args` is **required** (v2.4.0): the server works only
   on the file pinned there — the safety guard against an agent opening the
   wrong (say, production) database. The full argument list is in
   [`../README.md`](../README.md).

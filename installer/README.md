@@ -21,7 +21,7 @@ on Windows.
 ```
 
 `-DatabasePath` is the Access database the server works on. It is **required**
-whenever `-Configure` writes a client config (v2.3.8): the server runs only
+whenever `-Configure` writes a client config (v2.4.0): the server runs only
 against the file pinned there — the safety guard against an agent opening the
 wrong (say, production) database.
 
@@ -104,7 +104,7 @@ and an uninstaller has no business deleting it. `-Force` overrides.
 | `-InstallDir <path>` | default `%LOCALAPPDATA%\Programs\AccessMCP`. Anywhere protected will want admin, which the default exists to avoid. |
 | `-Configure claude-code,claude-desktop,cursor,codex,all,none` | default `none` on install, `all` on `-Uninstall` |
 | `-ServerName <name>` | the key written into the configs; default `accessmcp` |
-| `-DatabasePath <path>` | the database the server works on (first argument). **Required with any `-Configure` that writes a config** — the server runs only against the file pinned here (v2.3.8). |
+| `-DatabasePath <path>` | the database the server works on (first argument). **Required with any `-Configure` that writes a config** — the server runs only against the file pinned here (v2.4.0). |
 | `-ReadOnly` | add `--read-only` to every config it writes |
 | `-DryRun` | print everything, change nothing |
 | `-SkipDoctor` | skip the verification step |

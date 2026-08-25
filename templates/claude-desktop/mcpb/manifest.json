@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "accessmcp",
   "display_name": "AccessMCP",
-  "version": "2.3.1",
+  "version": "2.4.0",
   "description": "Microsoft Access tools for AI agents: inspect schemas, read and write data, edit VBA, run health reports. Free account included — read tools are free, write tools come with the trial and Pro.",
   "author": {
     "name": "A-Point Systems Ltd",

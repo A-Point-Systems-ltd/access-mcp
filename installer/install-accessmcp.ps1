@@ -54,7 +54,7 @@
 .PARAMETER DatabasePath
     The Access database (.accdb/.mdb/.adp) this server works on, passed as the
     first argument in every config written. Required whenever -Configure
-    registers a client (v2.3.8: the server runs only against the file pinned
+    registers a client (v2.4.0: the server runs only against the file pinned
     here -- the safety guard against an agent opening the wrong database).
     May be omitted when no client configs are written (-Configure none, or no
     -Configure at all).
@@ -855,12 +855,12 @@ try {
         $argPreview = @(Get-ServerArguments)
         Write-Info ("arguments         : " + $(if ($argPreview.Count -eq 0) { '(none)' } else { ($argPreview -join ' ') }))
 
-        # v2.3.8: the server runs only against the database pinned as its first
+        # v2.4.0: the server runs only against the database pinned as its first
         # argument. Refuse to register a client with no pin -- that would write
         # a config the server rejects -- and refuse BEFORE touching anything.
         $plannedTargets = Resolve-Targets -Requested $Configure -DefaultWhenEmpty 'none'
         if ($plannedTargets.Count -gt 0 -and -not ($DatabasePath -and $DatabasePath.Trim() -ne '')) {
-            throw ("-Configure writes client configs, and the server requires the database pinned as its first argument (v2.3.8). " +
+            throw ("-Configure writes client configs, and the server requires the database pinned as its first argument (v2.4.0). " +
                    "Re-run with -DatabasePath 'C:\Data\YourDatabase.accdb' -- the Access file this server is allowed to work on.")
         }
         if ($plannedTargets.Count -gt 0 -and -not (Test-Path -LiteralPath $DatabasePath)) {
