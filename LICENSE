@@ -1,12 +1,117 @@
-PLACEHOLDER-EULA — NOT THE FINAL LICENSE TEXT
+Access-MCP — End User License Agreement
+A-Point Systems Ltd · Last updated: 20 June 2026
 
-Access-MCP (accessmcp.exe) and this distribution repository are proprietary
-software of A-Point Systems Ltd. All rights reserved. No license is granted
-by this placeholder.
+This End User License Agreement (the **Agreement**) is a binding legal agreement between you (an individual or a single legal entity, **you**) and **A-Point Systems Ltd**, a company incorporated in Israel (company registration no. 514562115), with its registered office at HaLapid 12, Petach Tikva, Israel (**A-Point**, **we**, **us**, or **our**), governing your installation and use of the Access-MCP software, including its executables, libraries, bundled assets, and documentation (the **Software**).
 
-The final End User License Agreement text is pending (product plan v4 §12.8,
-owner: Daniel). The release pipeline refuses to publish a Release while this
-placeholder marker is present, and the compliance preflight blocks every
-directory submission on it.
+By downloading, installing, activating, or using the Software, you agree to be bound by this Agreement. If you do not agree, do not install or use the Software. If you are accepting on behalf of an organization, you represent that you have authority to bind it.
 
-Contact: support@access-mcp.ai · https://access-mcp.ai
+
+## 1. Definitions
+
+- **Software** — the Access-MCP MCP server distributed by A-Point as a self-contained Windows executable, together with any updates and documentation.
+- **Account** — your Access-MCP account, created by signing in with a supported identity provider (Microsoft, Google, or GitHub). Your entitlements attach to your Account.
+- **Work Pass** — a short-lived, cryptographically signed credential the Service issues to machines on paid plans (Trial and Pro), enabling operation for up to seventy-two (72) hours without contacting the Service.
+- **Tier** — the entitlement level applicable to you: Trial, Free, or Pro.
+- **Service** — A-Point's hosted account and entitlement service (at account.access-mcp.ai) the Software contacts to verify entitlements and issue Work Passes.
+
+
+## 2. License grant
+
+Subject to your continuous compliance with this Agreement and payment of any applicable fees, A-Point grants you a limited, non-exclusive, non-transferable, non-sublicensable, revocable license to install and use the Software solely for your internal business or software-development purposes, on the number of machines permitted by your Tier. Unless otherwise stated at purchase, a Pro subscription permits activation on up to three (3) machines per developer seat. The Software is licensed, not sold.
+
+
+## 3. Tiers and entitlements
+
+- **Trial** — all tools, for 14 days from your first sign-in, at no charge and without payment details. After 14 days your Account automatically continues on the Free tier.
+- **Free** — read-only tools, subject to a daily operations limit (approximately 50 operations per day), conditional on signing in with an Account. The Free tier requires an internet connection.
+- **Pro** — all tools (including write, VBA, form/report, batch, and transfer operations) without the Free daily limit, for the duration of a paid **USD $49 per developer, per month** subscription.
+
+
+## 4. Accounts, sign-in, and offline grace
+
+Your Account is personal to you and must not be shared. You sign in once per machine through your browser (a device-authorization flow with your chosen identity provider); the Software then validates your entitlement against the Service. On paid plans (Trial and Pro) the Software receives a Work Pass that renews automatically and remains valid for up to seventy-two (72) hours without an internet connection. Work Passes may be issued to a limited number of machines per Account at the same time (currently up to three within a rolling 72-hour window).
+
+> After a Work Pass expires without successful renewal, the Software degrades to the Free read-only tier. It will never unlock Pro entitlements while offline beyond the pass validity. This fail-safe protects both you and A-Point.
+
+
+## 5. Restrictions
+
+The Software is **proprietary and closed-source**. You may not, and may not permit any third party to:
+
+- copy (except one backup copy), distribute, sublicense, rent, lease, lend, sell, or otherwise make the Software available to any third party;
+- reverse engineer, decompile, disassemble, or otherwise attempt to derive the source code, algorithms, or structure of the Software, except to the limited extent this restriction is prohibited by applicable law;
+- circumvent, disable, tamper with, or attempt to defeat any licensing, metering, entitlement, activation, or security mechanism;
+- exceed the entitlements of your Tier, or use the Software after your license has expired or been revoked;
+- remove, obscure, or alter any copyright, trademark, or other proprietary notices;
+- use the Software to develop or assist a competing product, or for any unlawful purpose.
+
+
+## 6. Telemetry and privacy
+
+To operate your Account and enforce usage limits, the Software transmits to the Service only: your Account identity, a pseudonymous installation identifier (a hash of machine and user identifiers), the Software version, and per-tool operation counts. The Software does **not** transmit the contents of your databases — no database, table, or field names, no records, no query text, and no VBA code. This processing is described in our [Privacy Policy](https://access-mcp.ai/privacy).
+
+
+## 7. Data safety and backups
+
+The Software operates against the database files you select. When write-capable tools are enabled (Trial or Pro), the Software can create, modify, or delete data and database objects on your instruction or that of your AI agent. **You are solely responsible for maintaining current backups of your data.** A-Point is not liable for any data loss or corruption. You can constrain risk by running in read-only mode and by granting your MCP client only the specific tools you intend to use; every write is recorded in the Software's audit trail.
+
+
+## 8. Third-party requirements
+
+The Software automates a locally installed copy of Microsoft Access via COM and requires a 64-bit Windows environment with a compatible, validly licensed installation of Microsoft Access (or the Access Runtime). You are responsible for holding all necessary third-party licenses. A-Point is independent of, and not endorsed by, Microsoft. "Microsoft", "Access", and related names are trademarks of their respective owners.
+
+
+## 9. Ownership and intellectual property
+
+A-Point and its licensors retain all right, title, and interest in and to the Software, including all intellectual property rights. No rights are granted to you except as expressly set out in this Agreement. All rights not expressly granted are reserved.
+
+
+## 10. Updates and changes
+
+A-Point may provide updates, upgrades, or patches to the Software. Unless an update is accompanied by a separate license, this Agreement governs it. A-Point may modify Software features, tools, and tier limits on a prospective basis.
+
+
+## 11. Fees and billing
+
+Pro is offered as a recurring subscription sold through **Paddle** as Merchant of Record. Billing, renewal, cancellation, and refunds are governed by our [Terms of Service](https://access-mcp.ai/terms) and [Refund Policy](https://access-mcp.ai/refund), together with Paddle's buyer terms.
+
+
+## 12. Term and termination
+
+This Agreement is effective until terminated. It terminates automatically if you breach any of its terms, and A-Point may revoke or suspend your license for breach or non-payment. On termination you must cease all use of the Software and destroy all copies in your possession. Sections 5–9, 13, 14, and 16–18 survive termination.
+
+
+## 13. Disclaimer of warranties
+
+THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE", WITHOUT WARRANTY OF ANY KIND, EXPRESS, IMPLIED, OR STATUTORY, INCLUDING IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT. A-POINT DOES NOT WARRANT THAT THE SOFTWARE WILL BE UNINTERRUPTED OR ERROR-FREE.
+
+
+## 14. Limitation of liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, A-POINT WILL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR FOR LOSS OF PROFITS, REVENUE, DATA, OR GOODWILL. A-POINT'S TOTAL AGGREGATE LIABILITY UNDER THIS AGREEMENT WILL NOT EXCEED THE GREATER OF THE FEES YOU PAID FOR THE SOFTWARE IN THE TWELVE MONTHS PRECEDING THE CLAIM, OR USD $100.
+
+
+## 15. Indemnification
+
+You agree to indemnify and hold harmless A-Point from any claim, damage, liability, or expense (including reasonable legal fees) arising from your use of the Software in breach of this Agreement or of applicable law.
+
+
+## 16. Export and sanctions compliance
+
+You must comply with all applicable export-control and sanctions laws. You may not use, export, or re-export the Software in violation of such laws, and you represent that you are not located in, and not a national of, an embargoed jurisdiction, and that you are not a prohibited or restricted party.
+
+
+## 17. Governing law and jurisdiction
+
+This Agreement is governed by the laws of the **State of Israel**, without regard to conflict-of-law principles, and the competent courts of **Tel Aviv–Jaffa, Israel** have exclusive jurisdiction, except that A-Point may seek injunctive relief in any competent court. Nothing here deprives a consumer of mandatory protections under the law of their country of residence.
+
+
+## 18. General
+
+This Agreement, together with the [Terms of Service](https://access-mcp.ai/terms), [Privacy Policy](https://access-mcp.ai/privacy), and [Refund Policy](https://access-mcp.ai/refund), is the entire agreement between you and A-Point regarding the Software. If any provision is held unenforceable, the remainder stays in effect. A failure to enforce a provision is not a waiver. You may not assign this Agreement; A-Point may assign it. We may revise this Agreement; we will update the "Last updated" date, and your continued use after changes take effect constitutes acceptance.
+
+
+## 19. Contact
+
+A-Point Systems Ltd · HaLapid 12, Petach Tikva, Israel  
+Email: [office@apoint.co.il](mailto:office@apoint.co.il) · Web: [https://access-mcp.ai](https://access-mcp.ai)
