@@ -22,14 +22,14 @@ created by the installer of Codex itself — if it does not exist yet, create it
 ## Manual — the CLI (recommended, no TOML editing)
 
 ```powershell
-codex mcp add accessmcp -- "C:\Users\YOU\AppData\Local\Programs\AccessMCP\accessmcp.exe"
+codex mcp add accessmcp -- "C:\Users\YOU\AppData\Local\Programs\AccessMCP\accessmcp.exe" "C:\Data\YourDatabase.accdb"
 ```
 
-Everything after `--` is the command line Codex will run, so extra arguments go
-there:
+Everything after `--` is the command line Codex will run — the required
+database path first, then any extra flags:
 
 ```powershell
-codex mcp add accessmcp -- "C:\...\accessmcp.exe" --read-only
+codex mcp add accessmcp -- "C:\...\accessmcp.exe" "C:\Data\YourDatabase.accdb" --read-only
 ```
 
 Then `codex mcp list` to confirm, and `/mcp` inside a Codex session to see the
@@ -43,13 +43,14 @@ Append the table from [`config.template.toml`](config.template.toml) to
 ```toml
 [mcp_servers.accessmcp]
 command = 'C:\Users\YOU\AppData\Local\Programs\AccessMCP\accessmcp.exe'
-args = []
+args = ['C:\Data\YourDatabase.accdb']
 ```
 
-Replace `YOU` with your Windows user name, or the whole path with wherever you
-put the exe. Single quotes make it a TOML literal string, so backslashes stay as
-they are — that is why this template does not double them the way the JSON ones
-do.
+Replace `YOU` with your Windows user name (or the whole path with wherever you
+put the exe), and the `args` entry with the database this server works on —
+it is required, and the server only ever touches the file pinned there.
+Single quotes make these TOML literal strings, so backslashes stay as they
+are — that is why this template does not double them the way the JSON ones do.
 
 ## Installer
 
@@ -83,7 +84,9 @@ codex mcp list
 
 ## Notes
 
-- `args = []` on purpose — plug & play. The full argument list is in
+- The database path in `args` is **required** (v2.3.8): the server works only
+  on the file pinned there — the safety guard against an agent opening the
+  wrong (say, production) database. The full argument list is in
   [`../README.md`](../README.md).
 - No `type` field: Codex infers the transport from `command` (stdio) vs `url`
   (streamable HTTP).

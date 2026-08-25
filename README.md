@@ -49,14 +49,16 @@ works with none of it:
 1. Download [`accessmcp.exe`](https://github.com/A-Point-Systems-ltd/access-mcp/releases/latest/download/accessmcp.exe)
    (verify with `SHA256SUMS.txt` / `release-manifest.json` from the same release).
 2. Put it anywhere you like.
-3. Point your client's MCP config at it:
+3. Point your client's MCP config at it, with the database this server works
+   on pinned in `args` — required; the server only ever touches the file
+   pinned there:
 
 ```json
 {
   "mcpServers": {
     "accessmcp": {
       "command": "C:\\path\\to\\accessmcp.exe",
-      "args": []
+      "args": ["C:\\Data\\YourDatabase.accdb"]
     }
   }
 }

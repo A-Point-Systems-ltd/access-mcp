@@ -10,7 +10,7 @@
 
 [mcp_servers.accessmcp]
 command = 'C:\Users\YOU\AppData\Local\Programs\AccessMCP\accessmcp.exe'
-args = []
+args = ['C:\Data\YourDatabase.accdb']
 
 # Optional, all verified fields of a stdio server entry:
 #   env = { SOME_VAR = "value" }     # environment for the server process

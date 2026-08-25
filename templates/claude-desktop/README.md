@@ -26,7 +26,7 @@ Format and location verified against
      "mcpServers": {
        "accessmcp": {
          "command": "C:\\Users\\YOU\\AppData\\Local\\Programs\\AccessMCP\\accessmcp.exe",
-         "args": []
+         "args": ["C:\\Data\\YourDatabase.accdb"]
        }
      }
    }
@@ -35,24 +35,29 @@ Format and location verified against
 3. **Quit Claude Desktop completely and reopen it.** The config is read once at
    startup; closing the window is not enough — quit from the tray.
 
-Replace `YOU` with your Windows user name, or the whole path with wherever you
-put the exe. Backslashes are doubled because this is JSON.
+Replace `YOU` with your Windows user name (or the whole path with wherever you
+put the exe), and the `args` entry with the database this server works on —
+it is required, and the server only ever touches the file pinned there.
+Backslashes are doubled because this is JSON.
 
 ## Installer
 
 ```powershell
-.\install-accessmcp.ps1 -ExePath .\accessmcp.exe -Configure claude-desktop
+.\install-accessmcp.ps1 -ExePath .\accessmcp.exe -Configure claude-desktop -DatabasePath "C:\Data\YourDatabase.accdb"
 ```
 
 It reads the existing file, adds one key, keeps everything else, and writes a
 timestamped `.bak` next to the original first. See [`../installer/`](../installer/).
 
-## One-click link
+## One-click bundle
 
-None. Claude Desktop has no documented `claude://` MCP install deeplink, so this
-directory does not ship one. (Desktop extension bundles are a separate packaging
-format and are **not** used here — they would put a second copy of the exe on
-the machine, which the direct-download contract exists to avoid.)
+The one-click route is the `accessmcp.mcpb` bundle from GitHub Releases:
+double-click it and Claude Desktop installs the server as an extension,
+asking for your database file at install time (the `user_config` file picker
+in [`mcpb/manifest.json`](mcpb/manifest.json) — that answer becomes the
+required `args` pin). The bundle carries its own copy of the exe; the manual
+route above stays the zero-extra-copies option. There is no `claude://` MCP
+install deeplink — the bundle is the one-click.
 
 ---
 
@@ -92,6 +97,8 @@ Then, in Claude Desktop, ask for `access_login` and open a database.
   `command`/`args`/`env`. Cursor and Claude Code get `"type": "stdio"` because
   their docs show it; this packaging does not add fields a client's own
   documentation does not show.
-- `args` is `[]` on purpose — plug & play. The full argument list is in
+- The database path in `args` is **required** (v2.3.8): the server works only
+  on the file pinned there — the safety guard against an agent opening the
+  wrong (say, production) database. The full argument list is in
   [`../README.md`](../README.md).
 - Windows only. Microsoft Access must be installed for the same Windows user.

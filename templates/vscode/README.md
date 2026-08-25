@@ -30,14 +30,16 @@ Installs just the AccessMCP server, no skills. Either:
     "accessmcp": {
       "type": "stdio",
       "command": "C:\\Users\\YOU\\AppData\\Local\\Programs\\AccessMCP\\accessmcp.exe",
-      "args": []
+      "args": ["C:\\Data\\YourDatabase.accdb"]
     }
   }
 }
 ```
 
 Replace `YOU` with your Windows user name — or the whole path with wherever
-you put `accessmcp.exe`. Always an absolute path.
+you put `accessmcp.exe`. Always an absolute path. The `args` entry is the
+database this server works on — **required** (v2.3.8); the server only ever
+touches the file pinned there.
 
 ## Requirements
 

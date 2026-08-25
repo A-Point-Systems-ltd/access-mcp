@@ -24,14 +24,16 @@ Merge the entry from [`mcp.template.json`](mcp.template.json) into the existing
     "accessmcp": {
       "type": "stdio",
       "command": "C:\\Users\\YOU\\AppData\\Local\\Programs\\AccessMCP\\accessmcp.exe",
-      "args": []
+      "args": ["C:\\Data\\YourDatabase.accdb"]
     }
   }
 }
 ```
 
-Replace `YOU` with your Windows user name, or the whole path with wherever you
-put the exe. Restart Cursor afterwards.
+Replace `YOU` with your Windows user name (or the whole path with wherever you
+put the exe), and the `args` entry with the database this server works on —
+it is required, and the server only ever touches the file pinned there.
+Restart Cursor afterwards.
 
 ## One-click install link
 
@@ -43,11 +45,13 @@ cursor://anysphere.cursor-deeplink/mcp/install?name=$NAME&config=$BASE64_ENCODED
 
 where `$BASE64_ENCODED_CONFIG` is base64 of the **single server object** — the
 inner value only, without the server name wrapping it. Because the exe path
-contains your Windows user name, a link is per-machine. Generate yours:
+contains your Windows user name and the config pins your database, a link is
+per-machine. Generate yours:
 
 ```powershell
 $exe    = "$env:LOCALAPPDATA\Programs\AccessMCP\accessmcp.exe"
-$config = @{ type = 'stdio'; command = $exe; args = @() } | ConvertTo-Json -Compress
+$db     = 'C:\Data\YourDatabase.accdb'   # the database this server works on — required
+$config = [ordered]@{ type = 'stdio'; command = $exe; args = @($db) } | ConvertTo-Json -Compress
 $b64    = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($config))
 $link   = "cursor://anysphere.cursor-deeplink/mcp/install?name=accessmcp&config=$b64"
 $link                 # paste it in a browser, or:
@@ -57,17 +61,17 @@ Start-Process $link    # hand it straight to Cursor
 For the placeholder path above, that yields:
 
 ```
-cursor://anysphere.cursor-deeplink/mcp/install?name=accessmcp&config=eyJ0eXBlIjoic3RkaW8iLCJjb21tYW5kIjoiQzpcXFVzZXJzXFxZT1VcXEFwcERhdGFcXExvY2FsXFxQcm9ncmFtc1xcQWNjZXNzTUNQXFxhY2Nlc3NtY3AuZXhlIiwiYXJncyI6W119
+cursor://anysphere.cursor-deeplink/mcp/install?name=accessmcp&config=eyJ0eXBlIjoic3RkaW8iLCJjb21tYW5kIjoiQzpcXFVzZXJzXFxZT1VcXEFwcERhdGFcXExvY2FsXFxQcm9ncmFtc1xcQWNjZXNzTUNQXFxhY2Nlc3NtY3AuZXhlIiwiYXJncyI6WyJDOlxcRGF0YVxcWW91ckRhdGFiYXNlLmFjY2RiIl19
 ```
 
-(decodes to `{"type":"stdio","command":"C:\\Users\\YOU\\AppData\\Local\\Programs\\AccessMCP\\accessmcp.exe","args":[]}` —
-it will not work until `YOU` is your real user name, which is exactly why the
-snippet above exists.)
+(decodes to `{"type":"stdio","command":"C:\\Users\\YOU\\AppData\\Local\\Programs\\AccessMCP\\accessmcp.exe","args":["C:\\Data\\YourDatabase.accdb"]}` —
+it will not work until `YOU` is your real user name and the database path is
+your real file, which is exactly why the snippet above exists.)
 
 ## Installer
 
 ```powershell
-.\install-accessmcp.ps1 -ExePath .\accessmcp.exe -Configure cursor
+.\install-accessmcp.ps1 -ExePath .\accessmcp.exe -Configure cursor -DatabasePath "C:\Data\YourDatabase.accdb"
 ```
 
 It merges into the **global** `%USERPROFILE%\.cursor\mcp.json`, backs the file up
@@ -93,11 +97,14 @@ prefer. See [`../installer/`](../installer/).
 "C:\Users\YOU\AppData\Local\Programs\AccessMCP\accessmcp.exe" doctor
 ```
 
-Then, in Cursor chat: "Open the Access database at C:\Data\MyApp.accdb".
+Then, in Cursor chat: "Open my database and show me the tables" — the agent
+works on the database pinned in `args`.
 
 ## Notes
 
-- `args` is `[]` on purpose — plug & play. The full argument list is in
+- The database path in `args` is **required** (v2.3.8): the server works only
+  on the file pinned there — the safety guard against an agent opening the
+  wrong (say, production) database. The full argument list is in
   [`../README.md`](../README.md).
 - Skills/rules: the `access-*` skill bodies in
   [`../claude-plugin/skills/`](../claude-plugin/skills/) are Claude Code plugin

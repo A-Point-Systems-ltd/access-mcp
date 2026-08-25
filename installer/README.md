@@ -5,17 +5,25 @@ on Windows.
 
 ```powershell
 # copy the exe, add it to PATH, configure everything, run the doctor
-.\install-accessmcp.ps1 -ExePath .\accessmcp.exe -Configure all
+.\install-accessmcp.ps1 -ExePath .\accessmcp.exe -Configure all -DatabasePath "C:\Data\YourDatabase.accdb"
 
 # see exactly what it would do, and touch nothing
-.\install-accessmcp.ps1 -ExePath .\accessmcp.exe -Configure all -DryRun
+.\install-accessmcp.ps1 -ExePath .\accessmcp.exe -Configure all -DatabasePath "C:\Data\YourDatabase.accdb" -DryRun
 
 # one client only
-.\install-accessmcp.ps1 -ExePath .\accessmcp.exe -Configure cursor,codex
+.\install-accessmcp.ps1 -ExePath .\accessmcp.exe -Configure cursor,codex -DatabasePath "C:\Data\YourDatabase.accdb"
+
+# copy the exe only, write no client configs (no -DatabasePath needed)
+.\install-accessmcp.ps1 -ExePath .\accessmcp.exe
 
 # undo everything it did
 .\install-accessmcp.ps1 -Uninstall
 ```
+
+`-DatabasePath` is the Access database the server works on. It is **required**
+whenever `-Configure` writes a client config (v2.3.8): the server runs only
+against the file pinned there — the safety guard against an agent opening the
+wrong (say, production) database.
 
 If PowerShell refuses to run the script, it is the execution policy, not the
 script: `powershell -ExecutionPolicy Bypass -File .\install-accessmcp.ps1 ...`
@@ -92,11 +100,11 @@ and an uninstaller has no business deleting it. `-Force` overrides.
 | Parameter | Meaning |
 |---|---|
 | `-ExePath <path>` | the exe to install |
-| `-FromRelease -ReleaseUrl <https url>` | download it instead. **No URL is hardcoded** — a stale URL baked into an installer is worse than no URL, and this script must never fetch something you did not name. Releases: <https://github.com/A-Point-Systems-ltd/MS.Access.MCP/releases> |
+| `-FromRelease -ReleaseUrl <https url>` | download it instead. **No URL is hardcoded** — a stale URL baked into an installer is worse than no URL, and this script must never fetch something you did not name. Releases: <https://github.com/A-Point-Systems-ltd/access-mcp/releases> |
 | `-InstallDir <path>` | default `%LOCALAPPDATA%\Programs\AccessMCP`. Anywhere protected will want admin, which the default exists to avoid. |
 | `-Configure claude-code,claude-desktop,cursor,codex,all,none` | default `none` on install, `all` on `-Uninstall` |
 | `-ServerName <name>` | the key written into the configs; default `accessmcp` |
-| `-DatabasePath <path>` | pin the server to one database (first argument). Default: plug & play — you tell the agent which database to open. |
+| `-DatabasePath <path>` | the database the server works on (first argument). **Required with any `-Configure` that writes a config** — the server runs only against the file pinned here (v2.3.8). |
 | `-ReadOnly` | add `--read-only` to every config it writes |
 | `-DryRun` | print everything, change nothing |
 | `-SkipDoctor` | skip the verification step |

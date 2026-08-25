@@ -3,7 +3,7 @@
     "accessmcp": {
       "type": "stdio",
       "command": "C:\\Users\\YOU\\AppData\\Local\\Programs\\AccessMCP\\accessmcp.exe",
-      "args": []
+      "args": ["C:\\Data\\YourDatabase.accdb"]
     }
   }
 }

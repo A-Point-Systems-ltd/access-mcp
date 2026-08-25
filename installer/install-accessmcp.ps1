@@ -52,9 +52,12 @@
     The MCP server key written into the client configs. Default 'accessmcp'.
 
 .PARAMETER DatabasePath
-    Optional. Pins the server to one database by passing it as the first
-    argument. Leave empty for plug-and-play, which is the documented default:
-    you tell the agent which database to open.
+    The Access database (.accdb/.mdb/.adp) this server works on, passed as the
+    first argument in every config written. Required whenever -Configure
+    registers a client (v2.3.8: the server runs only against the file pinned
+    here -- the safety guard against an agent opening the wrong database).
+    May be omitted when no client configs are written (-Configure none, or no
+    -Configure at all).
 
 .PARAMETER ReadOnly
     Optional. Adds --read-only to the arguments in every config written.
@@ -78,10 +81,10 @@
     at this install directory (that is, an entry this script did not write).
 
 .EXAMPLE
-    .\install-accessmcp.ps1 -ExePath .\accessmcp.exe -Configure all
+    .\install-accessmcp.ps1 -ExePath .\accessmcp.exe -Configure all -DatabasePath "C:\Data\YourDatabase.accdb"
 
 .EXAMPLE
-    .\install-accessmcp.ps1 -FromRelease -ReleaseUrl https://example/accessmcp.exe -Configure cursor,codex
+    .\install-accessmcp.ps1 -FromRelease -ReleaseUrl https://example/accessmcp.exe -Configure cursor,codex -DatabasePath "C:\Data\YourDatabase.accdb"
 
 .EXAMPLE
     .\install-accessmcp.ps1 -Uninstall
@@ -850,7 +853,19 @@ try {
         Write-Info "executable        : $InstalledExe"
         Write-Info "server name       : $ServerName"
         $argPreview = @(Get-ServerArguments)
-        Write-Info ("arguments         : " + $(if ($argPreview.Count -eq 0) { '(none - plug & play)' } else { ($argPreview -join ' ') }))
+        Write-Info ("arguments         : " + $(if ($argPreview.Count -eq 0) { '(none)' } else { ($argPreview -join ' ') }))
+
+        # v2.3.8: the server runs only against the database pinned as its first
+        # argument. Refuse to register a client with no pin -- that would write
+        # a config the server rejects -- and refuse BEFORE touching anything.
+        $plannedTargets = Resolve-Targets -Requested $Configure -DefaultWhenEmpty 'none'
+        if ($plannedTargets.Count -gt 0 -and -not ($DatabasePath -and $DatabasePath.Trim() -ne '')) {
+            throw ("-Configure writes client configs, and the server requires the database pinned as its first argument (v2.3.8). " +
+                   "Re-run with -DatabasePath 'C:\Data\YourDatabase.accdb' -- the Access file this server is allowed to work on.")
+        }
+        if ($plannedTargets.Count -gt 0 -and -not (Test-Path -LiteralPath $DatabasePath)) {
+            Write-Warn2 "database file not found at $DatabasePath -- writing the config anyway; make sure the path is right before a client starts the server."
+        }
         if ($env:LOCALAPPDATA -and -not $InstallDir.StartsWith($env:LOCALAPPDATA, [System.StringComparison]::OrdinalIgnoreCase)) {
             Write-Warn2 "$InstallDir is outside %LOCALAPPDATA%; if it is a protected location this will need administrator rights, which the default location exists to avoid."
         }
@@ -862,7 +877,7 @@ try {
         Write-Head 'User PATH'
         Add-InstallDirToUserPath
 
-        $targets = Resolve-Targets -Requested $Configure -DefaultWhenEmpty 'none'
+        $targets = $plannedTargets
         if ($targets.Count -eq 0) {
             Write-Head 'Client configs'
             Write-Info 'None requested. Add one with -Configure claude-code,claude-desktop,cursor,codex or -Configure all,'
