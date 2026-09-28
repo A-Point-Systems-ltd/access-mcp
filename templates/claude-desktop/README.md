@@ -59,6 +59,14 @@ required `args` pin). The bundle carries its own copy of the exe; the manual
 route above stays the zero-extra-copies option. There is no `claude://` MCP
 install deeplink — the bundle is the one-click.
 
+> **Windows asks which app should open the file?** That just means no
+> installed app has claimed the `.mcpb` extension yet — the download is
+> fine. Update Claude Desktop to the latest version (older builds used the
+> `.dxt` format), or skip the association entirely: Claude Desktop →
+> Settings → Extensions → Advanced settings → **Install Extension…** and
+> pick the file — dragging the `.mcpb` onto the Settings window works too.
+> (Seen on the very first customer install, 25.8.2026.)
+
 ---
 
 ## The Windows gotcha worth knowing about
