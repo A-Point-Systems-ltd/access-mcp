@@ -1,11 +1,11 @@
 {
-  "version": "2.4.1",
-  "exe_url": "https://github.com/A-Point-Systems-ltd/access-mcp/releases/download/v2.4.1/accessmcp.exe",
-  "exe_sha256": "9e8da3ac31ba7d1757616bf66a33a9de471cbe8654664dbdc48d468c0140d22b",
-  "mcpb_sha256": "603ad5f6d6eea8da8124b10a7139f573dfe68f9306e790d52b64bc752372a644",
-  "source_commit": "183b45f46dde0b9ff6d1873f9ce6f9f250017040",
-  "build_run_id": "36475418336",
-  "built_at": "2026-09-28T19:57:12.8853259Z",
+  "version": "2.5.0",
+  "exe_url": "https://github.com/A-Point-Systems-ltd/access-mcp/releases/download/v2.5.0/accessmcp.exe",
+  "exe_sha256": "dd61e7238fda52992b0b598ddec7a545e0d3efa57e3ee764314ed4cf56b5d829",
+  "mcpb_sha256": "517169ec38afeb776859776f9d4f3f6eae796a1a0113f1340c8425918e8da43e",
+  "source_commit": "8a594e681dbae3ab7b5dfd65f72725317b9164cb",
+  "build_run_id": "36575312160",
+  "built_at": "2026-09-29T13:32:04.0219243Z",
   "signing": {
     "status": "signed",
     "subject": "",
