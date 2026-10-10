@@ -1,6 +1,17 @@
 # AccessMCP — VS Code / GitHub Copilot
 
-Two **different** install routes. Pick one; they do different things.
+## Easiest: the VS Code / Cursor extension
+
+The **access-mcp.ai** extension (`apoint.ms-access-mcp`) bundles the server,
+so you do not edit `mcp.json`. Install it from the
+[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=apoint.ms-access-mcp)
+(or [Open VSX](https://open-vsx.org/extension/apoint/ms-access-mcp)), run
+**Access-MCP: Select / Change Database** from the Command Palette, then open
+Copilot Chat in **Agent** mode. Requires VS Code 1.101+ and Microsoft Access
+2010+ (32-bit or 64-bit). Guide: <https://access-mcp.ai/docs/vscode-setup>.
+
+Without the extension, there are two **different** install routes. Pick one;
+they do different things.
 
 ## Route 1 — AccessMCP Plugin (MCP server + skills)
 

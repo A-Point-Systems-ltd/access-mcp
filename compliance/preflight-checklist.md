@@ -20,7 +20,7 @@ submission goes out to any directory. CI enforces the automatable rows.
 
 ## Tool Surface Directory Audit (before annotations, not after)
 
-- [ ] Per tool (all 27): read-only? writes? deletes? behavior changes by
+- [ ] Per tool (all 27 smart tools): read-only? writes? deletes? behavior changes by
       action/args?
 - [ ] Mixed read/write tools identified; each split, or covered by a
       directory-safe reduced tool surface — an annotation on a mixed tool is

@@ -6,6 +6,18 @@ Format, file locations and the install-link scheme verified against
 
 ---
 
+## Easiest: the extension
+
+Install the **access-mcp.ai** extension from
+[Open VSX](https://open-vsx.org/extension/apoint/ms-access-mcp) — it bundles
+the server. Cursor ignores MCP servers contributed by extensions, so run
+**Access-MCP: Register Server in mcp.json (Cursor)** once (offered
+automatically on first run), then reload. It writes an `ms-access` entry to
+`~/.cursor/mcp.json` or `<workspace>/.cursor/mcp.json`. Guide:
+<https://access-mcp.ai/docs/cursor-setup>.
+
+The manual setup below remains the fallback.
+
 ## Manual
 
 Two files, same shape — pick the scope you want:
