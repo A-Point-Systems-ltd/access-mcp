@@ -157,7 +157,14 @@ compareTrees(join(root, 'agent-plugin/bootstrap'), join(root, 'claude-plugin/boo
 // Plugin's mcp.json and documents that it does not expand ${PLUGIN_ROOT}, so
 // the standard token left the server path unresolved there.
 const agentMcp = read(join(root, 'agent-plugin/mcp.json'));
-if (!agentMcp.includes('${CLAUDE_PLUGIN_ROOT}') || agentMcp.includes('${PLUGIN_ROOT}')) {
+// Until the 2.7.0 package is synced here, main still holds the 2.5.x one, so two COMPLETE layouts pass and any mix
+// of them fails (a half-synced package). Drop LEGACY_25X once 2.7.0 is on main.
+//   2.7.0:  agent-plugin uses ${CLAUDE_PLUGIN_ROOT}; claude-plugin declares userConfig.access_file_path and passes
+//           it as env AccessFilePath.
+//   2.5.x:  agent-plugin uses ${PLUGIN_ROOT}; no userConfig, no env.
+const LEGACY_25X =
+  agentMcp.includes('${PLUGIN_ROOT}') && !agentMcp.includes('${CLAUDE_PLUGIN_ROOT}') && claudePlugin?.userConfig === undefined;
+if (!LEGACY_25X && (!agentMcp.includes('${CLAUDE_PLUGIN_ROOT}') || agentMcp.includes('${PLUGIN_ROOT}'))) {
   err('agent-plugin/mcp.json: expected ${CLAUDE_PLUGIN_ROOT} and no ${PLUGIN_ROOT} (Cursor does not expand the standard variable)');
 }
 if (agentMcp.includes('__PLUGIN_ROOT__')) {
@@ -188,7 +195,7 @@ if (claudePlugin && agentPlugin) {
   if (JSON.stringify(claudeRest) !== JSON.stringify(agentRest)) {
     err('claude-plugin plugin.json drifted from agent-plugin/plugin.json (expected: identical minus $schema and userConfig)');
   }
-  if (!claudePlugin.userConfig?.access_file_path) {
+  if (!LEGACY_25X && !claudePlugin.userConfig?.access_file_path) {
     err('claude-plugin plugin.json: userConfig.access_file_path missing — the server cannot start without a database');
   }
 }
@@ -203,8 +210,11 @@ const server = claudeMcpJson?.mcpServers?.accessmcp;
 if (server && !/bootstrap\.ps1$/.test(server.args?.at(-1) ?? '')) {
   err('claude-plugin/.mcp.json: server must launch bootstrap/bootstrap.ps1');
 }
-if (server && server.env?.AccessFilePath !== '${user_config.access_file_path}') {
+if (server && !LEGACY_25X && server.env?.AccessFilePath !== '${user_config.access_file_path}') {
   err('claude-plugin/.mcp.json: server env.AccessFilePath must be ${user_config.access_file_path}');
+}
+if (server && LEGACY_25X && server.env?.AccessFilePath !== undefined) {
+  err('claude-plugin/.mcp.json: env.AccessFilePath without userConfig — a half-synced package');
 }
 // Cursor has no per-user plugin setting: a fixed env value in the canonical
 // package would override the AccessFilePath variable its users set.
