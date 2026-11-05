@@ -12,7 +12,8 @@
 //   3. Derived copies match the canonical package byte-for-byte
 //      (claude-plugin skills/ and bootstrap/ vs agent-plugin's).
 //   4. Adapter substitution happened: no raw __PLUGIN_ROOT__ token outside
-//      agent-plugin/; claude-plugin uses ${CLAUDE_PLUGIN_ROOT}.
+//      agent-plugin/; both packages use ${CLAUDE_PLUGIN_ROOT} (Cursor expands
+//      it, not the standard ${PLUGIN_ROOT}).
 //   5. Skills have frontmatter with name + description; marketplace source
 //      paths exist; bootstrap manifest shape is right.
 //
@@ -150,15 +151,24 @@ compareTrees(join(root, 'agent-plugin/skills'), join(root, 'claude-plugin/skills
 compareTrees(join(root, 'agent-plugin/bootstrap'), join(root, 'claude-plugin/bootstrap'), 'claude-plugin bootstrap');
 
 // --------------------------------------- 4. adapter token substitution -----
-// Canonical package = Agent Plugins 1.0, so it uses the STANDARD
-// ${PLUGIN_ROOT} variable (consumable as-is by Cursor / VS Code). The
-// Claude adapter is derived by substituting ${CLAUDE_PLUGIN_ROOT}.
+// Canonical package = Agent Plugins 1.0 ($schema declared), but its plugin
+// root variable is ${CLAUDE_PLUGIN_ROOT}, NOT the standard ${PLUGIN_ROOT}:
+// Cursor expands ${CURSOR_PLUGIN_ROOT} and ${CLAUDE_PLUGIN_ROOT} in an Agent
+// Plugin's mcp.json and documents that it does not expand ${PLUGIN_ROOT}, so
+// the standard token left the server path unresolved there.
 const agentMcp = read(join(root, 'agent-plugin/mcp.json'));
-if (!agentMcp.includes('${PLUGIN_ROOT}')) {
-  err('agent-plugin/mcp.json: expected the standard ${PLUGIN_ROOT} variable (Agent Plugins 1.0)');
+// Until the 2.7.0 package is synced here, main still holds the 2.5.x one, so two COMPLETE layouts pass and any mix
+// of them fails (a half-synced package). Drop LEGACY_25X once 2.7.0 is on main.
+//   2.7.0:  agent-plugin uses ${CLAUDE_PLUGIN_ROOT}; claude-plugin declares userConfig.access_file_path and passes
+//           it as env AccessFilePath.
+//   2.5.x:  agent-plugin uses ${PLUGIN_ROOT}; no userConfig, no env.
+const LEGACY_25X =
+  agentMcp.includes('${PLUGIN_ROOT}') && !agentMcp.includes('${CLAUDE_PLUGIN_ROOT}') && claudePlugin?.userConfig === undefined;
+if (!LEGACY_25X && (!agentMcp.includes('${CLAUDE_PLUGIN_ROOT}') || agentMcp.includes('${PLUGIN_ROOT}'))) {
+  err('agent-plugin/mcp.json: expected ${CLAUDE_PLUGIN_ROOT} and no ${PLUGIN_ROOT} (Cursor does not expand the standard variable)');
 }
 if (agentMcp.includes('__PLUGIN_ROOT__')) {
-  err('agent-plugin/mcp.json: legacy __PLUGIN_ROOT__ token — the canonical package uses ${PLUGIN_ROOT}');
+  err('agent-plugin/mcp.json: legacy __PLUGIN_ROOT__ token — the canonical package uses ${CLAUDE_PLUGIN_ROOT}');
 }
 // Agent Plugins 1.0 requires the $schema declaration on the MCP config
 // itself, not only on plugin.json — a conformant client MUST reject the
@@ -176,11 +186,17 @@ if (!claudeMcp.includes('${CLAUDE_PLUGIN_ROOT}')) {
   err('claude-plugin/.mcp.json: expected ${CLAUDE_PLUGIN_ROOT} in the bootstrap path');
 }
 // Adapter manifest = canonical manifest minus $schema (Claude Code is not
-// an Agent Plugins consumer); everything else must match.
+// an Agent Plugins consumer) plus the per-user userConfig that asks for the
+// database; everything else must match. The server refuses to start without
+// a database, so the userConfig and the env that carries it are required.
 if (claudePlugin && agentPlugin) {
   const { $schema: _s, ...agentRest } = agentPlugin;
-  if (JSON.stringify(claudePlugin) !== JSON.stringify(agentRest)) {
-    err('claude-plugin plugin.json drifted from agent-plugin/plugin.json (expected: identical minus $schema)');
+  const { userConfig: _u, ...claudeRest } = claudePlugin;
+  if (JSON.stringify(claudeRest) !== JSON.stringify(agentRest)) {
+    err('claude-plugin plugin.json drifted from agent-plugin/plugin.json (expected: identical minus $schema and userConfig)');
+  }
+  if (!LEGACY_25X && !claudePlugin.userConfig?.access_file_path) {
+    err('claude-plugin plugin.json: userConfig.access_file_path missing — the server cannot start without a database');
   }
 }
 const claudeMcpJson = readJson(claudeMcpPath);
@@ -193,6 +209,17 @@ if (claudeMcpJson?.$schema && /agent-plugins\.org/.test(claudeMcpJson.$schema)) 
 const server = claudeMcpJson?.mcpServers?.accessmcp;
 if (server && !/bootstrap\.ps1$/.test(server.args?.at(-1) ?? '')) {
   err('claude-plugin/.mcp.json: server must launch bootstrap/bootstrap.ps1');
+}
+if (server && !LEGACY_25X && server.env?.AccessFilePath !== '${user_config.access_file_path}') {
+  err('claude-plugin/.mcp.json: server env.AccessFilePath must be ${user_config.access_file_path}');
+}
+if (server && LEGACY_25X && server.env?.AccessFilePath !== undefined) {
+  err('claude-plugin/.mcp.json: env.AccessFilePath without userConfig — a half-synced package');
+}
+// Cursor has no per-user plugin setting: a fixed env value in the canonical
+// package would override the AccessFilePath variable its users set.
+if (JSON.parse(agentMcp)?.mcpServers?.accessmcp?.env?.AccessFilePath !== undefined) {
+  err('agent-plugin/mcp.json: must not set env.AccessFilePath (it would override the environment variable Cursor users set)');
 }
 
 // ------------------------------------------------- 5. skills frontmatter ---
