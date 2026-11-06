@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Installs accessmcp.exe for the current user and, optionally, registers it
     with Claude Code, Claude Desktop, Cursor and/or the OpenAI Codex CLI.
@@ -265,7 +265,7 @@ function Backup-ConfigFile {
 # can never disagree about how the exe is started.
 function Get-ServerArguments {
     # Return the array PLAIN (no unary comma): every call site collects with
-    # @(...), and `,$a` + @() nested the array — configs came out with
+    # @(...), and `,$a` + @() nested the array - configs came out with
     # args: [[]] instead of args: [] (PR #1 review finding).
     [string[]]$a = @()
     if ($DatabasePath -and $DatabasePath.Trim() -ne '') { $a += $DatabasePath }
