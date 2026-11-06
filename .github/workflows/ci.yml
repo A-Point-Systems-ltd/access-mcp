@@ -22,6 +22,14 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
 
+      # Windows PowerShell 5.1 reads a BOM-less .ps1 in the ANSI code page; on
+      # a Hebrew machine (1255) one UTF-8 em dash breaks the parse and the MCP
+      # server never starts. Every .ps1 must be ASCII and parse as 1255.
+      # First, so a failure elsewhere never skips it.
+      - name: PowerShell scripts parse on every Windows locale
+        shell: pwsh
+        run: ./scripts/check-ps1-encoding.ps1
+
       # Supply-chain scans + manifest agreement + adapter drift + skills
       # frontmatter — one script, same one the sync workflow runs.
       - name: Validate dist tree

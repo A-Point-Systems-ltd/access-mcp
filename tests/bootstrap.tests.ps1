@@ -1,4 +1,4 @@
-# Pester tests for the bootstrap's pure logic. Run anywhere (Linux CI
+﻿# Pester tests for the bootstrap's pure logic. Run anywhere (Linux CI
 # included): the ACCESSMCP_BOOTSTRAP_TEST hook loads the functions without
 # touching Windows paths or the network.
 #
@@ -53,7 +53,7 @@ Describe 'Assert-ManifestShape' {
     }
 
     It 'accepts the all-zero placeholder shape (the release pipeline, not the shape check, blocks it)' {
-        # The bootstrap will download and then fail the hash comparison —
+        # The bootstrap will download and then fail the hash comparison -
         # the shape check only guards structure.
         $m = New-Manifest @{ exe_sha256 = ('0' * 64) }
         { Assert-ManifestShape $m 'test' } | Should -Not -Throw
@@ -123,14 +123,14 @@ Describe 'Assert-ExeTrusted / Test-CachedVersion (version + BYTES pin)' {
 
     It 'rejects a cached entry with the right version name but WRONG bytes' {
         # The round-4 finding: versions\2.3.1\ exists but holds different
-        # bytes than the manifest pins — must NOT count as installed.
+        # bytes than the manifest pins - must NOT count as installed.
         $exe = Get-ExePathFor '2.3.1'
         New-Item -ItemType Directory -Force -Path (Split-Path $exe) | Out-Null
         [IO.File]::WriteAllText($exe, 'tampered / stale bytes')
         $m = New-Manifest   # pins the aaaa... hash, not these bytes
         { Assert-ExeTrusted $exe $m } | Should -Throw '*SHA256 mismatch*'
         Test-CachedVersion $m | Should -BeFalse
-        Test-InstalledVersion '2.3.1' | Should -BeTrue   # exists — but existence is no longer enough
+        Test-InstalledVersion '2.3.1' | Should -BeTrue   # exists - but existence is no longer enough
     }
 
     It 'returns false when the pinned version is simply not cached' {
