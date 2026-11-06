@@ -22,18 +22,22 @@ created by the installer of Codex itself — if it does not exist yet, create it
 ## Manual — the CLI (recommended, no TOML editing)
 
 ```powershell
-codex mcp add accessmcp -- "C:\Users\YOU\AppData\Local\Programs\AccessMCP\accessmcp.exe" "C:\Data\YourDatabase.accdb"
+codex mcp add "YourDatabase-accdb" -- "C:\Users\YOU\AppData\Local\Programs\AccessMCP\accessmcp.exe" "C:\Data\YourDatabase.accdb"
 ```
+
+The name is the database file's, with a dash for the dot (`YourDatabase-accdb`):
+one server per database. Run the command once
+per database, each with its own name and path.
 
 Everything after `--` is the command line Codex will run — the required
 database path first, then any extra flags:
 
 ```powershell
-codex mcp add accessmcp -- "C:\...\accessmcp.exe" "C:\Data\YourDatabase.accdb" --read-only
+codex mcp add "YourDatabase-accdb" -- "C:\...\accessmcp.exe" "C:\Data\YourDatabase.accdb" --read-only
 ```
 
 Then `codex mcp list` to confirm, and `/mcp` inside a Codex session to see the
-tools. `codex mcp remove accessmcp` undoes it.
+tools. `codex mcp remove "YourDatabase-accdb"` undoes it.
 
 ## Manual — editing the file
 
@@ -41,7 +45,7 @@ Append the table from [`config.template.toml`](config.template.toml) to
 `%USERPROFILE%\.codex\config.toml`:
 
 ```toml
-[mcp_servers.accessmcp]
+[mcp_servers."YourDatabase-accdb"]
 command = 'C:\Users\YOU\AppData\Local\Programs\AccessMCP\accessmcp.exe'
 args = ['C:\Data\YourDatabase.accdb']
 ```
@@ -51,6 +55,17 @@ put the exe), and the `args` entry with the database this server works on —
 it is required, and the server only ever touches the file pinned there.
 Single quotes make these TOML literal strings, so backslashes stay as they
 are — that is why this template does not double them the way the JSON ones do.
+The table name uses the dash form (`YourDatabase-accdb`, no dot), which works
+quoted or not; a dotted name is not verified with Codex.
+
+**One server per database.** The table is named after the database file, in
+the dash form. A
+second database is a second table with its own name and its own path in
+`args`; one table never serves two files, and the agent uses the server whose
+name matches the file. Every client working on the same database — agents and
+the VS Code / Cursor extension's object tree — shares one Microsoft Access
+process (the shared host, since 2.7.0); add `'--standalone'` to `args` to give a
+server a private Access instance instead.
 
 ## Installer
 

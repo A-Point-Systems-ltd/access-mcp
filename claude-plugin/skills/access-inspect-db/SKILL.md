@@ -10,9 +10,11 @@ tools only. This skill never writes.
 
 ## Steps
 
-1. **Open a session.** Call `Session_OpenDatabase` with the absolute path the
-   user gave. If they gave none, ask for it — do not guess paths. Keep the
-   returned `sessionId` for every later call. If the tool reports a sign-in
+1. **Open a session.** Use the MCP server whose name matches the file — each
+   server is pinned to one database and refuses any other path. Call its
+   `Session_OpenDatabase` with that file's absolute path. If the user gave no
+   file, ask for it — do not guess paths. Keep the returned `sessionId` for
+   every later call. If the tool reports a sign-in
    requirement, tell the user to run `access_login` first (free account, ~20
    seconds in the browser).
 2. **Database facts.** `Session_GetDatabaseInfo` — format, size, path, whether
@@ -51,5 +53,8 @@ Return a compact report, in the user's language:
 - Read tools only: `Session_*` (open/info/close), `Object_List/Get/GetProperties`,
   `Query_Read`, `VBA_Read`, `System_Read`. No `Object_Create/Update/Delete`,
   no `Query_Execute`, no `Data_Transfer`.
-- One database at a time; reuse the session, never open the same file twice.
+- Each MCP server is bound to one database. To work with several, the user
+  opens several connections (extension) or adds one server entry per database;
+  call the server whose name matches the file. Reuse the session, never open
+  the same file twice.
 - Large databases: inventory first, then go deep only where the user directs.

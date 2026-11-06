@@ -1,6 +1,6 @@
 {
   "name": "accessmcp",
-  "version": "2.5.0",
+  "version": "2.7.0",
   "description": "Microsoft Access tools for AI agents: inspect schemas, read and write data, edit VBA, run health reports. Free account included — read tools are free, write tools come with the trial and Pro.",
   "author": {
     "name": "A-Point Systems Ltd",
@@ -13,5 +13,13 @@
     "database",
     "vba",
     "windows"
-  ]
+  ],
+  "userConfig": {
+    "access_file_path": {
+      "type": "file",
+      "title": "Access database",
+      "description": "Full path of the .accdb, .mdb or .adp file this plugin's MCP server works on. One database per plugin install; for more databases use the Access-MCP extension or add one MCP server entry per database.",
+      "required": true
+    }
+  }
 }

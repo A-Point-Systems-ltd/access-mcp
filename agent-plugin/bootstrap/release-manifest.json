@@ -1,15 +1,15 @@
 {
-  "version": "2.5.0",
-  "exe_url": "https://github.com/A-Point-Systems-ltd/access-mcp/releases/download/v2.5.0/accessmcp.exe",
-  "exe_sha256": "dd61e7238fda52992b0b598ddec7a545e0d3efa57e3ee764314ed4cf56b5d829",
-  "mcpb_sha256": "517169ec38afeb776859776f9d4f3f6eae796a1a0113f1340c8425918e8da43e",
-  "source_commit": "8a594e681dbae3ab7b5dfd65f72725317b9164cb",
-  "build_run_id": "36575312160",
-  "built_at": "2026-09-29T13:32:04.0219243Z",
+  "version": "2.7.0",
+  "exe_url": "https://github.com/A-Point-Systems-ltd/access-mcp/releases/download/v2.7.0/accessmcp.exe",
+  "exe_sha256": "760d038211e335cc1be1162d1bfb681d9e875e16f183658f1ab7196e63c1d1f2",
+  "mcpb_sha256": "f3506796577914ec59724ff2bf2ac23d8cb07368ad0fc46025ecf7d9c7542a1e",
+  "source_commit": "d98f37a9a9fa00075f10c596f3748974a6390cb6",
+  "build_run_id": "42242268221",
+  "built_at": "2026-11-06T15:25:11.9379835Z",
   "signing": {
     "status": "signed",
-    "subject": "",
-    "durable_identity_oid": ""
+    "subject": "A POINT SYSTEMS LTD",
+    "durable_identity_oid": "1.3.6.1.4.1.311.97.157087873.404991952.854192681.277294395"
   },
   "supported_os": [
     "windows-x64"

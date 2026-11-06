@@ -11,7 +11,8 @@ database.
 
 ## Procedure
 
-1. **Session.** `Session_OpenDatabase` (ask for the path if not given);
+1. **Session.** `Session_OpenDatabase` on the MCP server whose name matches the
+   file (each server is pinned to one database; ask which file if not given);
    `Session_GetDatabaseInfo` for format/size. Prefer `--read-only` sessions
    when the user offers the choice.
 2. **Structural integrity.**

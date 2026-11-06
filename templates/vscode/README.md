@@ -1,17 +1,6 @@
 # AccessMCP — VS Code / GitHub Copilot
 
-## Easiest: the VS Code / Cursor extension
-
-The **access-mcp.ai** extension (`apoint.ms-access-mcp`) bundles the server,
-so you do not edit `mcp.json`. Install it from the
-[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=apoint.ms-access-mcp)
-(or [Open VSX](https://open-vsx.org/extension/apoint/ms-access-mcp)), run
-**Access-MCP: Select / Change Database** from the Command Palette, then open
-Copilot Chat in **Agent** mode. Requires VS Code 1.101+ and Microsoft Access
-2010+ (32-bit or 64-bit). Guide: <https://access-mcp.ai/docs/vscode-setup>.
-
-Without the extension, there are two **different** install routes. Pick one;
-they do different things.
+Two **different** install routes. Pick one; they do different things.
 
 ## Route 1 — AccessMCP Plugin (MCP server + skills)
 
@@ -38,7 +27,7 @@ Installs just the AccessMCP server, no skills. Either:
 ```jsonc
 {
   "servers": {
-    "accessmcp": {
+    "YourDatabase.accdb": {
       "type": "stdio",
       "command": "C:\\Users\\YOU\\AppData\\Local\\Programs\\AccessMCP\\accessmcp.exe",
       "args": ["C:\\Data\\YourDatabase.accdb"]
@@ -51,6 +40,13 @@ Replace `YOU` with your Windows user name — or the whole path with wherever
 you put `accessmcp.exe`. Always an absolute path. The `args` entry is the
 database this server works on — **required** (v2.4.0); the server only ever
 touches the file pinned there.
+
+**One server per database.** The entry is named after the database file. A
+second database is a second entry with its own name and its own path in
+`args`; one entry never serves two files, and the agent uses the server whose
+name matches the file. The object tree and every agent working on the same
+database share one Microsoft Access process (the shared host, since 2.7.0);
+add `--standalone` to `args` to give an entry a private Access instance instead.
 
 ## Requirements
 

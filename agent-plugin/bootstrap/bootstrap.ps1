@@ -1,4 +1,4 @@
-﻿# AccessMCP bootstrap - launches the accessmcp.exe version this plugin is
+# AccessMCP bootstrap - launches the accessmcp.exe version this plugin is
 # pinned to, from the shared version cache, downloading and verifying it
 # first when needed.
 #
@@ -31,6 +31,14 @@
 #     carrying the Code Signing EKU and OUR Durable Identity EKU (Azure
 #     Artifact Signing rotates certs, so the pin is the durable EKU - not a
 #     thumbprint), with Subject as defense-in-depth.
+#   * NO DATABASE, NO DOWNLOAD: the server refuses to start without a database
+#     (first argument or the AccessFilePath environment variable) and exits 2.
+#     Fetching and verifying an exe only to hit that exit would hide the real
+#     cause behind a download, so the bootstrap checks first, says what to
+#     set on ONE stderr line and exits 2 itself, before it touches the cache
+#     or the network. Claude Code passes the database from the plugin's
+#     per-user setting; Cursor has no per-user plugin setting, so there the
+#     AccessFilePath environment variable is the way.
 #   * No cache cleanup here: another plugin may pin any version. The
 #     installer owns cache maintenance.
 #   * This is public code: no secrets, no licensing logic, no internal
@@ -91,6 +99,24 @@ function Get-ExePathFor([string] $Version) {
 
 function Test-InstalledVersion([string] $Version) {
     ($Version) -and (Test-Path -LiteralPath (Get-ExePathFor $Version))
+}
+
+function Test-DatabaseConfigured([string[]] $ForwardedArgs, [string] $EnvPath) {
+    # Mirrors how the server finds its database (Program.cs): the first
+    # argument that does not start with "--", else the AccessFilePath
+    # environment variable. A client that cannot fill the plugin's per-user
+    # setting hands over the template text itself ("${user_config...}"),
+    # which is not a path. --version and --doctor need no database (the
+    # server answers them before it looks for one).
+    foreach ($a in $ForwardedArgs) {
+        if ($a -eq '--version' -or $a -eq '--doctor') { return $true }
+    }
+    $candidate = $null
+    foreach ($a in $ForwardedArgs) {
+        if ($a -notlike '--*') { $candidate = $a; break }
+    }
+    if ([string]::IsNullOrWhiteSpace($candidate)) { $candidate = $EnvPath }
+    (-not [string]::IsNullOrWhiteSpace($candidate)) -and ($candidate.Trim() -notlike '${*')
 }
 
 function Compare-Version([string] $A, [string] $B) {
@@ -253,6 +279,17 @@ if ($env:WSL_DISTRO_NAME) {
     Fail ("AccessMCP cannot run inside WSL - it needs native Windows COM access " +
           "to Microsoft Access. Run your MCP client on Windows itself. " +
           "See https://access-mcp.ai/docs#supported-platforms")
+}
+
+# ---------------------------------------------------------------- database --
+# Before the cache, the mutex and the network: no database means no start
+# (the server's own rule, exit 2), so there is nothing worth downloading.
+if (-not (Test-DatabaseConfigured $ExeArgs $env:AccessFilePath)) {
+    [Console]::Error.WriteLine("Access-MCP plugin: no database configured. " +
+        "Claude Code: run /plugin configure accessmcp@accessmcp. " +
+        "Cursor: set the AccessFilePath environment variable and restart, " +
+        "or use the Access-MCP extension (Connections view).")
+    exit 2
 }
 
 # ------------------------------------------------------------------- paths --

@@ -2,14 +2,11 @@
   "mcpServers": {
     "accessmcp": {
       "type": "stdio",
-      "command": "powershell.exe",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${CLAUDE_PLUGIN_ROOT}/bootstrap/bootstrap.ps1"
-      ]
+      "command": "${CLAUDE_PLUGIN_ROOT}/bin/accessmcp.exe",
+      "args": [],
+      "env": {
+        "AccessFilePath": "${user_config.access_file_path}"
+      }
     }
   }
 }

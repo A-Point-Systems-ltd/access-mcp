@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Installs accessmcp.exe for the current user and, optionally, registers it
     with Claude Code, Claude Desktop, Cursor and/or the OpenAI Codex CLI.

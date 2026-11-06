@@ -8,7 +8,12 @@
 # string instead and double every backslash:
 #   command = "C:\\Users\\O'Brien\\AppData\\Local\\Programs\\AccessMCP\\accessmcp.exe"
 
-[mcp_servers.accessmcp]
+# One server per database, named after the file in the dash form (no dot:
+# YourDatabase-accdb), which works quoted or not. A second database is a second
+# table with its own name and its own path in args. The object tree and every
+# agent on the same database share one Access process; add '--standalone' to
+# args to opt out.
+[mcp_servers."YourDatabase-accdb"]
 command = 'C:\Users\YOU\AppData\Local\Programs\AccessMCP\accessmcp.exe'
 args = ['C:\Data\YourDatabase.accdb']
 

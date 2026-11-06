@@ -7,20 +7,39 @@ adapter is derived from. **Do not edit per-client copies**; edit here (or
 rather: upstream in the product repo's `packaging/`, which syncs to here),
 and let CI verify the copies match.
 
-## Plugin-root variables
+## Plugin-root variable
 
-`mcp.json` uses the Agent Plugins standard `${PLUGIN_ROOT}` variable. Client
-adapters that use a different variable are **derived** by the sync workflow,
-never edited by hand:
+`mcp.json` uses `${CLAUDE_PLUGIN_ROOT}`, **not** the Agent Plugins standard
+`${PLUGIN_ROOT}`: Cursor's documentation says it expands `${CURSOR_PLUGIN_ROOT}`
+and `${CLAUDE_PLUGIN_ROOT}` in an Agent Plugin's `mcp.json` and does not expand
+`${PLUGIN_ROOT}`, so with the standard token the bootstrap path never resolved
+and the server could not start. Claude Code expands `${CLAUDE_PLUGIN_ROOT}`
+itself. The package still declares the Agent Plugins `$schema`; the schema puts
+no constraint on variable text in `args`.
 
 | Client | Variable | Where |
 |---|---|---|
-| Cursor / VS Code (Agent Plugins 1.0) | `${PLUGIN_ROOT}` | this package, unchanged |
-| Claude Code | `${CLAUDE_PLUGIN_ROOT}` | `../claude-plugin/.mcp.json`, derived |
+| Cursor | `${CLAUDE_PLUGIN_ROOT}` | this package, unchanged |
+| Claude Code | `${CLAUDE_PLUGIN_ROOT}` | `../claude-plugin/.mcp.json`, same launch line plus the database `env` |
+| VS Code | not verified for this package (its docs list `${PLUGIN_ROOT}` for Agent Plugins 1.0 and `${CLAUDE_PLUGIN_ROOT}` for the Claude format) | use the Access-MCP extension |
 | Codex (D5 adapter) | per OpenAI plugin docs | derived at D5 |
 
-CI fails if the canonical package loses the standard token or an adapter
-still carries it un-substituted.
+The sync workflow checks that this package does not use `${PLUGIN_ROOT}` and
+that the Claude Code adapter's launch line is identical to this one.
+
+## Choosing the database
+
+The server works on exactly one database and refuses to start without it, so a
+plugin install has to say which. How depends on the client:
+
+| Client | How the database is chosen |
+|---|---|
+| Claude Code | Asks for an "Access database" when you install or enable the plugin (`/plugin install accessmcp@accessmcp`); passed to the server as `AccessFilePath`. Change it with `/plugin configure accessmcp@accessmcp`. From a shell, `claude plugin install` does not prompt: pass `--config access_file_path=C:\Data\YourDatabase.accdb`. One database per plugin install. |
+| Cursor | A plugin has no per-user setting. Set the **`AccessFilePath`** Windows environment variable to the `.accdb` path (user level is enough) and restart Cursor; it is global to every project. **Not verified end to end in Cursor**: whether the variable reaches the plugin's server is unconfirmed (Cursor's docs say stdio servers run in an isolated environment), so prefer the extension. For several databases, or per-project choice, use the **Access-MCP extension** (Connections view) or one `mcp.json` entry per database (`templates/cursor/` in the public repo). |
+
+Without a database the bootstrap stops before downloading anything, prints one
+line on stderr (`Access-MCP plugin: no database configured. ...`, naming the fix
+for Claude Code and for Cursor) and exits 2.
 
 ## What the bootstrap does — and the three install families
 

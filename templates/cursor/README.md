@@ -6,18 +6,6 @@ Format, file locations and the install-link scheme verified against
 
 ---
 
-## Easiest: the extension
-
-Install the **access-mcp.ai** extension from
-[Open VSX](https://open-vsx.org/extension/apoint/ms-access-mcp) — it bundles
-the server. Cursor ignores MCP servers contributed by extensions, so run
-**Access-MCP: Register Server in mcp.json (Cursor)** once (offered
-automatically on first run), then reload. It writes an `ms-access` entry to
-`~/.cursor/mcp.json` or `<workspace>/.cursor/mcp.json`. Guide:
-<https://access-mcp.ai/docs/cursor-setup>.
-
-The manual setup below remains the fallback.
-
 ## Manual
 
 Two files, same shape — pick the scope you want:
@@ -33,7 +21,7 @@ Merge the entry from [`mcp.template.json`](mcp.template.json) into the existing
 ```json
 {
   "mcpServers": {
-    "accessmcp": {
+    "YourDatabase.accdb": {
       "type": "stdio",
       "command": "C:\\Users\\YOU\\AppData\\Local\\Programs\\AccessMCP\\accessmcp.exe",
       "args": ["C:\\Data\\YourDatabase.accdb"]
@@ -46,6 +34,13 @@ Replace `YOU` with your Windows user name (or the whole path with wherever you
 put the exe), and the `args` entry with the database this server works on —
 it is required, and the server only ever touches the file pinned there.
 Restart Cursor afterwards.
+
+**One server per database.** The entry is named after the database file. A
+second database is a second entry with its own name and its own path in
+`args`; one entry never serves two files, and the agent uses the server whose
+name matches the file. The object tree and every agent working on the same
+database share one Microsoft Access process (the shared host, since 2.7.0);
+add `--standalone` to `args` to give an entry a private Access instance instead.
 
 ## One-click install link
 
@@ -63,9 +58,10 @@ per-machine. Generate yours:
 ```powershell
 $exe    = "$env:LOCALAPPDATA\Programs\AccessMCP\accessmcp.exe"
 $db     = 'C:\Data\YourDatabase.accdb'   # the database this server works on — required
+$name   = [uri]::EscapeDataString([IO.Path]::GetFileName($db))   # one server per database, named after the file
 $config = [ordered]@{ type = 'stdio'; command = $exe; args = @($db) } | ConvertTo-Json -Compress
 $b64    = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($config))
-$link   = "cursor://anysphere.cursor-deeplink/mcp/install?name=accessmcp&config=$b64"
+$link   = "cursor://anysphere.cursor-deeplink/mcp/install?name=$name&config=$b64"
 $link                 # paste it in a browser, or:
 Start-Process $link    # hand it straight to Cursor
 ```
@@ -73,7 +69,7 @@ Start-Process $link    # hand it straight to Cursor
 For the placeholder path above, that yields:
 
 ```
-cursor://anysphere.cursor-deeplink/mcp/install?name=accessmcp&config=eyJ0eXBlIjoic3RkaW8iLCJjb21tYW5kIjoiQzpcXFVzZXJzXFxZT1VcXEFwcERhdGFcXExvY2FsXFxQcm9ncmFtc1xcQWNjZXNzTUNQXFxhY2Nlc3NtY3AuZXhlIiwiYXJncyI6WyJDOlxcRGF0YVxcWW91ckRhdGFiYXNlLmFjY2RiIl19
+cursor://anysphere.cursor-deeplink/mcp/install?name=YourDatabase.accdb&config=eyJ0eXBlIjoic3RkaW8iLCJjb21tYW5kIjoiQzpcXFVzZXJzXFxZT1VcXEFwcERhdGFcXExvY2FsXFxQcm9ncmFtc1xcQWNjZXNzTUNQXFxhY2Nlc3NtY3AuZXhlIiwiYXJncyI6WyJDOlxcRGF0YVxcWW91ckRhdGFiYXNlLmFjY2RiIl19
 ```
 
 (decodes to `{"type":"stdio","command":"C:\\Users\\YOU\\AppData\\Local\\Programs\\AccessMCP\\accessmcp.exe","args":["C:\\Data\\YourDatabase.accdb"]}` —
@@ -90,13 +86,39 @@ It merges into the **global** `%USERPROFILE%\.cursor\mcp.json`, backs the file u
 first, and prints your generated deeplink so you can use that instead if you
 prefer. See [`../installer/`](../installer/).
 
+## As a plugin
+
+The agent plugin ([`../agent-plugin/`](../agent-plugin/)) starts the same server
+through the open-source bootstrap. A Cursor plugin has no per-user setting, so it
+cannot ask which database to use; the server reads it from the **`AccessFilePath`**
+environment variable instead:
+
+```powershell
+[Environment]::SetEnvironmentVariable('AccessFilePath', 'C:\Data\YourDatabase.accdb', 'User')
+```
+
+Then quit Cursor completely and start it again so it picks the variable up. The
+value is global: every project and every window gets the same database.
+
+**This route is not verified end to end in Cursor.** Cursor's docs say it runs
+stdio servers in an isolated environment (see the gotchas below), and whether your
+own Windows environment variables reach the plugin's server is unconfirmed. Prefer
+the Access-MCP extension (Connections view) or the manual `mcp.json` entries above,
+one per database, which put the path in `args` and do not depend on it. Without a
+database the plugin's server stops at once and prints
+`Access-MCP plugin: no database configured.` followed by the fix for Claude Code
+and for Cursor.
+
 ---
 
 ## Gotchas from Cursor's own docs
 
 - **Cursor runs stdio servers in an isolated environment.** Use an absolute path
   to the exe and assume nothing about `PATH` or shell profile — even after the
-  installer adds `%LOCALAPPDATA%\Programs\AccessMCP` to your user `PATH`.
+  installer adds `%LOCALAPPDATA%\Programs\AccessMCP` to your user `PATH`. Whether
+  that environment includes your own variables, such as `AccessFilePath` for the
+  plugin route above, is unverified: put the database in `args` (or use the
+  extension) rather than relying on it.
 - **Team allowlists approve servers by command pattern**, so keep the install
   path stable. `%LOCALAPPDATA%\Programs\AccessMCP\accessmcp.exe` is the path the
   installer uses on every machine, which makes one allowlist entry enough.

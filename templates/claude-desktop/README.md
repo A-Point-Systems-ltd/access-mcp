@@ -16,7 +16,7 @@ Format and location verified against
 
    PowerShell: `notepad $env:APPDATA\Claude\claude_desktop_config.json`
 
-2. Merge the `accessmcp` entry from
+2. Merge the entry from
    [`claude_desktop_config.template.json`](claude_desktop_config.template.json)
    into the existing `mcpServers` object — **do not replace the file** if you
    already have servers there:
@@ -24,7 +24,7 @@ Format and location verified against
    ```json
    {
      "mcpServers": {
-       "accessmcp": {
+       "YourDatabase.accdb": {
          "command": "C:\\Users\\YOU\\AppData\\Local\\Programs\\AccessMCP\\accessmcp.exe",
          "args": ["C:\\Data\\YourDatabase.accdb"]
        }
@@ -39,6 +39,13 @@ Replace `YOU` with your Windows user name (or the whole path with wherever you
 put the exe), and the `args` entry with the database this server works on —
 it is required, and the server only ever touches the file pinned there.
 Backslashes are doubled because this is JSON.
+
+**One server per database.** The entry is named after the database file. A
+second database is a second entry with its own name and its own path in
+`args`; one entry never serves two files. Every client working on the same
+database — agents and the VS Code / Cursor extension's object tree — shares one
+Microsoft Access process (the shared host, since 2.7.0); add `--standalone` to
+`args` to give an entry a private Access instance instead.
 
 ## Installer
 
@@ -58,6 +65,13 @@ in [`mcpb/manifest.json`](mcpb/manifest.json) — that answer becomes the
 required `args` pin). The bundle carries its own copy of the exe; the manual
 route above stays the zero-extra-copies option. There is no `claude://` MCP
 install deeplink — the bundle is the one-click.
+
+One Desktop extension entry serves one database: the file picked at install
+time. The server refuses any other file, so the agent cannot switch databases
+by itself. To move the entry to another database, change its **Access
+database** setting (Settings → Extensions → the AccessMCP extension) and restart
+Claude Desktop. To use two databases at once, use the manual route above, one
+entry per database.
 
 > **Windows asks which app should open the file?** That just means no
 > installed app has claimed the `.mcpb` extension yet — the download is
@@ -89,7 +103,7 @@ writes `%APPDATA%\Claude\claude_desktop_config.json` **and**, if any
 `%LOCALAPPDATA%\Packages\Claude_*\LocalCache\Roaming\Claude\` directory already
 exists, merges into that copy too — matching by wildcard rather than by a
 hardcoded package name. It never creates the packaged directory. If your
-`accessmcp` entry does not show up, check both paths.
+entry does not show up, check both paths.
 
 ## Verify
 

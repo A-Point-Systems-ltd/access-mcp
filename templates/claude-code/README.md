@@ -14,7 +14,7 @@ project you work in, and fix the path:
 ```json
 {
   "mcpServers": {
-    "accessmcp": {
+    "YourDatabase.accdb": {
       "type": "stdio",
       "command": "C:\\Users\\YOU\\AppData\\Local\\Programs\\AccessMCP\\accessmcp.exe",
       "args": ["C:\\Data\\YourDatabase.accdb"]
@@ -28,14 +28,26 @@ put the exe), and the `args` entry with the database this server works on —
 it is required, and the server only ever touches the file pinned there.
 Backslashes are doubled because this is JSON.
 
+**One server per database.** The entry is named after the database file. A
+second database is a second entry with its own name and its own path in
+`args`; one entry never serves two files, and the agent uses the server whose
+name matches the file. Every client working on the same database — agents and
+the VS Code / Cursor extension's object tree — shares one Microsoft Access
+process (the shared host, since 2.7.0); add `--standalone` to `args` to give an
+entry a private Access instance instead.
+
 Claude Code asks for approval the first time it sees a project-scoped server —
 that prompt is expected. `claude mcp reset-project-choices` resets the answer.
 
 ## 2. Manual — the CLI, no file editing
 
 ```powershell
-claude mcp add --transport stdio --scope user accessmcp -- "C:\Users\YOU\AppData\Local\Programs\AccessMCP\accessmcp.exe" "C:\Data\YourDatabase.accdb"
+claude mcp add --transport stdio --scope user YourDatabase-accdb -- "C:\Users\YOU\AppData\Local\Programs\AccessMCP\accessmcp.exe" "C:\Data\YourDatabase.accdb"
 ```
+
+The name is the database file's, with a dash instead of the dot (a name typed on
+the command line is safest with letters, digits and dashes only). Run the
+command once per database, each with its own name and path.
 
 Scopes (from the docs above):
 
@@ -50,11 +62,11 @@ is passed to `accessmcp.exe` untouched — the required database path first, the
 any extra flags:
 
 ```powershell
-claude mcp add --transport stdio --scope user accessmcp -- "C:\...\accessmcp.exe" "C:\Data\YourDatabase.accdb" --read-only
+claude mcp add --transport stdio --scope user YourDatabase-accdb -- "C:\...\accessmcp.exe" "C:\Data\YourDatabase.accdb" --read-only
 ```
 
-Check it: `claude mcp list` → `accessmcp ✔ Connected`. Remove it:
-`claude mcp remove accessmcp`.
+Check it: `claude mcp list` → `YourDatabase-accdb ✔ Connected`. Remove it:
+`claude mcp remove YourDatabase-accdb`.
 
 ## 3. Installer
 
@@ -88,10 +100,18 @@ same canonical per-user path this directory documents
 (`%LOCALAPPDATA%\Programs\AccessMCP`, versioned). Plugin and manual installs
 therefore share one exe — no version drift between them.
 
-The plugin's `.mcp.json` is fixed content, so the required database pin cannot
-live there. How the plugin route pins the database is being finalized for the
-v2.4.0 rollout; until that lands, use one of the manual routes above, where
-the pin goes in `args`.
+**Choosing the database.** The server works on one database and will not start
+without it. Installing or enabling the plugin asks for it — an **Access
+database** prompt, in a recent Claude Code (one whose plugins support
+`userConfig`; an older one does not ask, and the plugin then stops with a "no
+database configured" message) — and the plugin passes the path to the server as the
+`AccessFilePath` environment variable. Change it any time with
+`/plugin configure accessmcp@accessmcp`. The setting is per user and per
+plugin install, not per project: one database per install.
+For several databases, or one per project, use the manual routes above (one
+entry per database) or the VS Code / Cursor extension. From a shell,
+`claude plugin install` does not prompt; pass the path with
+`claude plugin install accessmcp@accessmcp --config access_file_path=C:\Data\YourDatabase.accdb`.
 
 ---
 
