@@ -29,9 +29,12 @@ jobs:
 
       # Belt and braces: nothing binary-shaped slipped into git even if the
       # validator's list lags. (git ls-files, so .gitignore can't hide it.)
+      # The one exception is the Claude Code plugin's exe and the two kept
+      # previous versions, whose hashes the validator checked above.
       - name: No binaries tracked by git
         run: |
-          bad=$(git ls-files | grep -Ei '\.(exe|dll|mcpb|zip|7z|msi|accdb|mdb|laccdb)$' || true)
+          bad=$(git ls-files | grep -Ei '\.(exe|dll|mcpb|zip|7z|msi|accdb|mdb|laccdb)$' \
+            | grep -Ev '^(claude-plugin/bin|previous-versions/[0-9.]+)/accessmcp\.exe$' || true)
           if [ -n "$bad" ]; then
             echo "Binary/database files tracked in the public dist repo:" >&2
             echo "$bad" >&2

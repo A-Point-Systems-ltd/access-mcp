@@ -1,5 +1,5 @@
-# No binaries in git — ever. Release assets live in GitHub Releases;
-# the bootstrap installs the exe under %LOCALAPPDATA%, not here.
+# No binaries in git, with one exception. Release assets live in GitHub
+# Releases; the bootstrap installs the exe under %LOCALAPPDATA%, not here.
 *.exe
 *.dll
 *.mcpb
@@ -7,6 +7,14 @@
 *.msi
 bin/
 node_modules/
+
+# The exception: the Claude Code plugin ships the release exe (the plugin
+# directory refuses a download-and-run launcher), plus the two previous
+# versions. Only release.yml puts them here; validate-dist.mjs checks each
+# one's SHA256 against its release-manifest.json.
+!claude-plugin/bin/
+!claude-plugin/bin/accessmcp.exe
+!previous-versions/*/accessmcp.exe
 
 # Access artifacts never belong in the public dist repo
 *.accdb
