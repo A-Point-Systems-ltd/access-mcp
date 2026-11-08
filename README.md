@@ -156,7 +156,9 @@ Details: <https://access-mcp.ai>.
 
 Release assets (`accessmcp.exe`, `accessmcp.mcpb`, `SHA256SUMS.txt`,
 `release-manifest.json`) are published here by the product's release
-pipeline; no binaries live in git.
+pipeline. The only binary in git is the Claude Code plugin's exe,
+`claude-plugin/server/accessmcp.exe`: the same signed file as the Release
+asset, checked against its SHA256 by `scripts/validate-dist.mjs`.
 
 ## Privacy
 

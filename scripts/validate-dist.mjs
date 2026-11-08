@@ -254,10 +254,12 @@ function checkExe(dir, manifest, label) {
 }
 checkExe(join(root, 'claude-plugin/server'), claudeManifest, 'claude-plugin/server');
 // The release commits the synced tree with git: an ignored exe would ship a plugin without its server while this
-// check of the working tree still passed. Only in a git checkout (release.yml's dist-repo, CI).
+// check of the working tree still passed. --no-index: the rules themselves, also once the exe is tracked (git does
+// not apply them to tracked files, but a rename into a newly ignored folder would be dropped). Only in a git
+// checkout (release.yml's dist-repo, CI).
 if (existsSync(join(root, '.git'))) {
   try {
-    execFileSync('git', ['-C', root, 'check-ignore', '-q', 'claude-plugin/server/accessmcp.exe'], { stdio: 'ignore' });
+    execFileSync('git', ['-C', root, 'check-ignore', '-q', '--no-index', 'claude-plugin/server/accessmcp.exe'], { stdio: 'ignore' });
     err('claude-plugin/server/accessmcp.exe: ignored by .gitignore — the release commit would leave it out');
   } catch (e) {
     // exit 1 = not ignored (what we want); anything else means git itself failed
