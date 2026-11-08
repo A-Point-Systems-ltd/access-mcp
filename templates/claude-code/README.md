@@ -94,11 +94,12 @@ at this repository's root, so from anywhere:
 /plugin install accessmcp@accessmcp
 ```
 
-The plugin's `.mcp.json` launches the open-source bootstrap
-(`bootstrap/bootstrap.ps1`), which installs and runs `accessmcp.exe` from the
-same canonical per-user path this directory documents
-(`%LOCALAPPDATA%\Programs\AccessMCP`, versioned). Plugin and manual installs
-therefore share one exe — no version drift between them.
+The plugin ships the signed release exe itself (`server/accessmcp.exe`, the
+same file as the GitHub Release asset) and its `.mcp.json` runs it directly:
+the Anthropic plugin directory does not accept a launcher that downloads a file
+and runs it. The exe updates with the plugin. A manual install
+(`%LOCALAPPDATA%\Programs\AccessMCP`) is a separate copy; Cursor's plugin keeps
+the open-source bootstrap (see `agent-plugin/`).
 
 **Choosing the database.** The server works on one database and will not start
 without it. Installing or enabling the plugin asks for it — an **Access

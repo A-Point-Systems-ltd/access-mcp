@@ -16,17 +16,21 @@
 //      it, not the standard ${PLUGIN_ROOT}).
 //   5. Skills have frontmatter with name + description; marketplace source
 //      paths exist; bootstrap manifest shape is right.
-//   6. Bundled layout: the Claude Code plugin ships claude-plugin/bin/
+//   6. Bundled layout: the Claude Code plugin ships claude-plugin/server/
 //      accessmcp.exe (the plugin directory refuses a download-and-run
-//      launcher). Its bytes match bin/release-manifest.json, it is under
-//      GitHub's 100 MB limit, and at most two older exes sit in
-//      previous-versions/. These are the ONLY binaries allowed here.
+//      launcher). Its bytes match server/release-manifest.json and it is
+//      under GitHub's 100 MB limit. That exe is the ONLY binary allowed here:
+//      no top-level claude-plugin/bin/ (Claude Code puts it on the Bash PATH,
+//      and claude.ai, Cowork and org distribution refuse it), and no older
+//      exes in the tree (Claude Code clones the whole repo; older exes stay
+//      on the GitHub Releases).
 //
 // Usage: node scripts/validate-dist.mjs [repo-root]
 
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative, extname } from 'node:path';
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 
 const root = process.argv[2] ?? process.cwd();
 const errors = [];
@@ -72,11 +76,10 @@ const FORBIDDEN_CONTENT = [
   { re: /RUNBOOK-HE|SETUP-GUIDE-HE|QA-PROD/i, why: 'private runbook reference' },
 ];
 const TEXT_EXT = new Set(['.md', '.json', '.jsonc', '.ps1', '.toml', '.yml', '.yaml', '.mjs', '.js', '.txt', '']);
-// The only binaries allowed: the Claude Code plugin's exe and the two kept
-// previous versions. Section 6 checks their bytes against their manifests.
+// The only binary allowed: the Claude Code plugin's exe. Section 6 checks its
+// bytes against its manifest.
 const ALLOWED_BINARIES = [
-  /^claude-plugin\/bin\/accessmcp\.exe$/,
-  /^previous-versions\/\d+(\.\d+)*\/accessmcp\.exe$/,
+  /^claude-plugin\/server\/accessmcp\.exe$/,
 ];
 
 for (const p of walk(root)) {
@@ -99,13 +102,15 @@ const marketplace = readJson(join(root, '.claude-plugin/marketplace.json'));
 const claudePlugin = readJson(join(root, 'claude-plugin/.claude-plugin/plugin.json'));
 const agentPlugin = readJson(join(root, 'agent-plugin/plugin.json'));
 const agentManifest = readJson(join(root, 'agent-plugin/bootstrap/release-manifest.json'));
-// Two complete layouts pass, any mix of them fails (a half-synced package):
-//   bundled: claude-plugin/bin/accessmcp.exe + bin/release-manifest.json, no bootstrap.
-//   2.5.x:   claude-plugin/bootstrap/ (what main holds until the first bundled release).
-const BUNDLED = existsSync(join(root, 'claude-plugin/bin'));
-const claudeManifest = readJson(join(root, BUNDLED
-  ? 'claude-plugin/bin/release-manifest.json'
-  : 'claude-plugin/bootstrap/release-manifest.json'));
+// The Claude Code plugin ships the release exe in claude-plugin/server/ with its manifest; the 2.5.x bootstrap and
+// the 2.7.0 bin/ layout are gone from main.
+const claudeManifest = readJson(join(root, 'claude-plugin/server/release-manifest.json'));
+if (existsSync(join(root, 'claude-plugin/bin'))) {
+  err('claude-plugin/bin: a top-level bin/ is reserved in Claude Code plugins (put on the Bash PATH; claude.ai refuses it) — the exe lives in claude-plugin/server/');
+}
+if (existsSync(join(root, 'previous-versions'))) {
+  err('previous-versions: older exes do not stay in the tree (Claude Code clones the whole repo) — they are on the GitHub Releases');
+}
 
 const versions = new Map();
 if (marketplace?.plugins?.[0]?.version) versions.set('.claude-plugin/marketplace.json', marketplace.plugins[0].version);
@@ -166,10 +171,8 @@ function compareTrees(canonDir, copyDir, label) {
   }
 }
 compareTrees(join(root, 'agent-plugin/skills'), join(root, 'claude-plugin/skills'), 'claude-plugin skills');
-if (!BUNDLED) {
-  compareTrees(join(root, 'agent-plugin/bootstrap'), join(root, 'claude-plugin/bootstrap'), 'claude-plugin bootstrap');
-} else if (existsSync(join(root, 'claude-plugin/bootstrap'))) {
-  err('claude-plugin/bootstrap: left over beside bin/ — the bundled plugin does not use the bootstrap');
+if (existsSync(join(root, 'claude-plugin/bootstrap'))) {
+  err('claude-plugin/bootstrap: left over — the bundled plugin does not use the bootstrap');
 }
 
 // --------------------------------------- 4. adapter token substitution -----
@@ -179,19 +182,7 @@ if (!BUNDLED) {
 // Plugin's mcp.json and documents that it does not expand ${PLUGIN_ROOT}, so
 // the standard token left the server path unresolved there.
 const agentMcp = read(join(root, 'agent-plugin/mcp.json'));
-// Until the first bundled release is synced here, main still holds the 2.5.x package, so two COMPLETE layouts pass
-// and any mix of them fails (a half-synced package). Drop LEGACY_25X once a bundled release is on main.
-//   bundled: agent-plugin uses ${CLAUDE_PLUGIN_ROOT}; claude-plugin ships bin/accessmcp.exe, declares
-//            userConfig.access_file_path and passes it as env AccessFilePath.
-//   2.5.x:   agent-plugin uses ${PLUGIN_ROOT}; claude-plugin launches the bootstrap; no userConfig, no env.
-const LEGACY_25X =
-  agentMcp.includes('${PLUGIN_ROOT}') && !agentMcp.includes('${CLAUDE_PLUGIN_ROOT}') && claudePlugin?.userConfig === undefined;
-if (LEGACY_25X === BUNDLED) {
-  err(BUNDLED
-    ? 'claude-plugin/bin present with the 2.5.x package — a half-synced package'
-    : 'claude-plugin/bin missing — after 2.5.x the Claude Code plugin must ship bin/accessmcp.exe (sync-dist --exe)');
-}
-if (!LEGACY_25X && (!agentMcp.includes('${CLAUDE_PLUGIN_ROOT}') || agentMcp.includes('${PLUGIN_ROOT}'))) {
+if (!agentMcp.includes('${CLAUDE_PLUGIN_ROOT}') || agentMcp.includes('${PLUGIN_ROOT}')) {
   err('agent-plugin/mcp.json: expected ${CLAUDE_PLUGIN_ROOT} and no ${PLUGIN_ROOT} (Cursor does not expand the standard variable)');
 }
 if (agentMcp.includes('__PLUGIN_ROOT__')) {
@@ -222,7 +213,7 @@ if (claudePlugin && agentPlugin) {
   if (JSON.stringify(claudeRest) !== JSON.stringify(agentRest)) {
     err('claude-plugin plugin.json drifted from agent-plugin/plugin.json (expected: identical minus $schema and userConfig)');
   }
-  if (!LEGACY_25X && !claudePlugin.userConfig?.access_file_path) {
+  if (!claudePlugin.userConfig?.access_file_path) {
     err('claude-plugin plugin.json: userConfig.access_file_path missing — the server cannot start without a database');
   }
 }
@@ -234,20 +225,14 @@ if (claudeMcpJson?.$schema && /agent-plugins\.org/.test(claudeMcpJson.$schema)) 
   err('claude-plugin/.mcp.json: carries the agent-plugins $schema — adapter derivation should strip it');
 }
 const server = claudeMcpJson?.mcpServers?.accessmcp;
-// Bundled: the exe by a literal path, no arguments, no shell — the form the
-// plugin directory follows. 2.5.x: the bootstrap.
-if (server && BUNDLED &&
-    (server.command !== '${CLAUDE_PLUGIN_ROOT}/bin/accessmcp.exe' || (server.args ?? []).length !== 0)) {
-  err('claude-plugin/.mcp.json: server must run ${CLAUDE_PLUGIN_ROOT}/bin/accessmcp.exe with no arguments');
+// The exe by a literal path, no arguments, no shell — the form the plugin
+// directory follows.
+if (server &&
+    (server.command !== '${CLAUDE_PLUGIN_ROOT}/server/accessmcp.exe' || (server.args ?? []).length !== 0)) {
+  err('claude-plugin/.mcp.json: server must run ${CLAUDE_PLUGIN_ROOT}/server/accessmcp.exe with no arguments');
 }
-if (server && !BUNDLED && !/bootstrap\.ps1$/.test(server.args?.at(-1) ?? '')) {
-  err('claude-plugin/.mcp.json: server must launch bootstrap/bootstrap.ps1');
-}
-if (server && !LEGACY_25X && server.env?.AccessFilePath !== '${user_config.access_file_path}') {
+if (server && server.env?.AccessFilePath !== '${user_config.access_file_path}') {
   err('claude-plugin/.mcp.json: server env.AccessFilePath must be ${user_config.access_file_path}');
-}
-if (server && LEGACY_25X && server.env?.AccessFilePath !== undefined) {
-  err('claude-plugin/.mcp.json: env.AccessFilePath without userConfig — a half-synced package');
 }
 // Cursor has no per-user plugin setting: a fixed env value in the canonical
 // package would override the AccessFilePath variable its users set.
@@ -257,7 +242,6 @@ if (JSON.parse(agentMcp)?.mcpServers?.accessmcp?.env?.AccessFilePath !== undefin
 
 // ------------------------------------------- 6. bundled exe + icon ---------
 const MAX_EXE_BYTES = 100 * 1024 * 1024; // GitHub refuses a pushed file over 100 MB
-const KEEP_PREVIOUS = 2;
 const sha256 = (p) => createHash('sha256').update(readFileSync(p)).digest('hex');
 function checkExe(dir, manifest, label) {
   const exe = join(dir, 'accessmcp.exe');
@@ -268,26 +252,24 @@ function checkExe(dir, manifest, label) {
     err(`${label}/accessmcp.exe: SHA256 does not match ${label}/release-manifest.json`);
   }
 }
-if (BUNDLED) {
-  checkExe(join(root, 'claude-plugin/bin'), claudeManifest, 'claude-plugin/bin');
-
-  const previousRoot = join(root, 'previous-versions');
-  if (existsSync(previousRoot)) {
-    const dirs = readdirSync(previousRoot).filter((name) => statSync(join(previousRoot, name)).isDirectory());
-    if (dirs.length > KEEP_PREVIOUS) err(`previous-versions: ${dirs.length} versions — keep at most ${KEEP_PREVIOUS}`);
-    for (const name of dirs) {
-      const label = `previous-versions/${name}`;
-      const m = readJson(join(previousRoot, name, 'release-manifest.json'), `${label}/release-manifest.json`);
-      if (m && m.version !== name) err(`${label}: release-manifest.json says version ${m.version}`);
-      if (name === claudeManifest?.version) err(`${label}: is the current version, not a previous one`);
-      checkExe(join(previousRoot, name), m, label);
-    }
+checkExe(join(root, 'claude-plugin/server'), claudeManifest, 'claude-plugin/server');
+// The release commits the synced tree with git: an ignored exe would ship a plugin without its server while this
+// check of the working tree still passed. --no-index: the rules themselves, also once the exe is tracked (git does
+// not apply them to tracked files, but a rename into a newly ignored folder would be dropped). Only in a git
+// checkout (release.yml's dist-repo, CI).
+if (existsSync(join(root, '.git'))) {
+  try {
+    execFileSync('git', ['-C', root, 'check-ignore', '-q', '--no-index', 'claude-plugin/server/accessmcp.exe'], { stdio: 'ignore' });
+    err('claude-plugin/server/accessmcp.exe: ignored by .gitignore — the release commit would leave it out');
+  } catch (e) {
+    // exit 1 = not ignored (what we want); anything else means git itself failed
+    if (e.status !== 1) err(`git check-ignore failed (${e.message}) — cannot tell whether the exe would be committed`);
   }
 }
 
 // Listing icon: square PNG, 512–2048 px a side, under 2 MB (plugin directory rule).
 const iconPath = join(root, 'claude-plugin/.claude-plugin/icon.png');
-if (BUNDLED && !existsSync(iconPath)) err('claude-plugin/.claude-plugin/icon.png missing — the plugin directory listing needs it');
+if (!existsSync(iconPath)) err('claude-plugin/.claude-plugin/icon.png missing — the plugin directory listing needs it');
 if (existsSync(iconPath)) {
   const png = readFileSync(iconPath);
   const isPng = png.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));

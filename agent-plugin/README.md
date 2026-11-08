@@ -41,7 +41,7 @@ Without a database the bootstrap stops before downloading anything, prints one
 line on stderr (`Access-MCP plugin: no database configured. ...`, naming the fix
 for Claude Code and for Cursor) and exits 2.
 
-## What the bootstrap does — and the three install families
+## What the bootstrap does — and the four install families
 
 `bootstrap/bootstrap.ps1` runs **exactly the version this plugin pins** in
 `bootstrap/release-manifest.json`, from the shared version cache
@@ -55,10 +55,15 @@ notice when something newer exists.
 
 Deliberately separate install families:
 
-1. **Plugins** → the shared version cache above.
-2. **Manual / `install-accessmcp.ps1`** → a standalone exe wherever the user
+1. **This plugin (Cursor and other Agent Plugin clients)** → the shared
+   version cache above.
+2. **The Claude Code plugin** → the signed exe bundled in the plugin
+   (`claude-plugin/server/accessmcp.exe`), which updates with the plugin; it
+   does not use the bootstrap (the Anthropic plugin directory refuses a
+   download-and-run launcher).
+3. **Manual / `install-accessmcp.ps1`** → a standalone exe wherever the user
    puts it; the bootstrap neither uses nor touches it.
-3. **Claude Desktop `.mcpb`** → its own bundled exe.
+4. **Claude Desktop `.mcpb`** → its own bundled exe.
 
 Platform nuance: on macOS/Linux the plugin fails before the bootstrap can
 even print its explanatory error — `powershell.exe` does not exist there, so
