@@ -1,0 +1,22 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.A-Point-Systems-ltd/access-mcp",
+  "title": "AccessMCP",
+  "description": "Microsoft Access (.accdb/.mdb) for AI agents: schemas, data, queries, VBA and health reports.",
+  "websiteUrl": "https://access-mcp.ai",
+  "repository": {
+    "url": "https://github.com/A-Point-Systems-ltd/access-mcp",
+    "source": "github"
+  },
+  "version": "2.8.0",
+  "packages": [
+    {
+      "registryType": "mcpb",
+      "identifier": "https://github.com/A-Point-Systems-ltd/access-mcp/releases/download/v2.8.0/accessmcp.mcpb",
+      "fileSha256": "fad3db6d467d9fa9d880066cde39ce7fec9a77bf626aae72cee4f073f505a249",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
