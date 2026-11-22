@@ -10,10 +10,10 @@
 </p>
 
 <p align="center">
-  <a href="https://marketplace.visualstudio.com/items?itemName=apoint.ms-access-mcp"><img src="https://img.shields.io/visual-studio-marketplace/v/apoint.ms-access-mcp?label=VS%20Marketplace" alt="VS Marketplace version"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=apoint.ms-access-mcp"><img src="https://vsmarketplacebadges.dev/version-short/apoint.ms-access-mcp.svg?label=VS%20Marketplace&amp;style=flat" alt="VS Marketplace version"></a>
   <a href="https://open-vsx.org/extension/apoint/ms-access-mcp"><img src="https://img.shields.io/open-vsx/v/apoint/ms-access-mcp?label=Open%20VSX" alt="Open VSX version"></a>
   <a href="https://registry.modelcontextprotocol.io/v0.1/servers/io.github.A-Point-Systems-ltd%2Faccess-mcp/versions/latest"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fregistry.modelcontextprotocol.io%2Fv0.1%2Fservers%2Fio.github.A-Point-Systems-ltd%252Faccess-mcp%2Fversions%2Flatest&query=%24.server.version&label=MCP%20Registry&prefix=v&color=blue" alt="MCP Registry version"></a>
-  <a href="https://marketplace.visualstudio.com/items?itemName=apoint.ms-access-mcp"><img src="https://img.shields.io/visual-studio-marketplace/i/apoint.ms-access-mcp" alt="VS Marketplace installs"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=apoint.ms-access-mcp"><img src="https://vsmarketplacebadges.dev/installs-short/apoint.ms-access-mcp.svg?label=installs&amp;style=flat" alt="VS Marketplace installs"></a>
   <img src="https://img.shields.io/badge/runtime-self--contained-blue" alt="Runtime: self-contained">
 </p>
 
